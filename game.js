@@ -404,15 +404,25 @@ function updateOtherPlayers() {
         if (!slot) return;
 
         const player = gameState.players[playerIndex];
-        const handCount = gameState.hands[playerIndex]?.length || 0;
+        const handCount = (gameState.hands[playerIndex] && Array.isArray(gameState.hands[playerIndex])) 
+            ? gameState.hands[playerIndex].length 
+            : 0;
         
-        slot.querySelector('.player-name').textContent = player?.name || '玩家' + (playerIndex + 1);
-        slot.querySelector('.hand-count').textContent = `手牌: ${handCount}`;
+        const nameElem = slot.querySelector('.player-name');
+        const countElem = slot.querySelector('.hand-count');
+        
+        if (nameElem) nameElem.textContent = player?.name || '玩家' + (playerIndex + 1);
+        if (countElem) countElem.textContent = `手牌: ${handCount}`;
         
         // 显示是否已出牌
         const playedCard = slot.querySelector('.played-card');
         if (playedCard) {
-            if (gameState.played && gameState.played[playerIndex]) {
+            const hasPlayed = gameState.played && 
+                            Array.isArray(gameState.played) && 
+                            gameState.played[playerIndex] !== null && 
+                            gameState.played[playerIndex] !== undefined;
+            
+            if (hasPlayed) {
                 playedCard.classList.remove('hidden');
                 playedCard.textContent = '✓';
             } else {
@@ -423,8 +433,10 @@ function updateOtherPlayers() {
         // 高亮当前玩家
         if (playerIndex === gameState.currentPlayer && gameState.phase === 'playing') {
             slot.style.border = '3px solid #f39c12';
+            slot.style.boxShadow = '0 0 15px rgba(243, 156, 18, 0.5)';
         } else {
-            slot.style.border = 'none';
+            slot.style.border = '';
+            slot.style.boxShadow = '';
         }
     });
 }
@@ -437,22 +449,38 @@ function renderHand() {
         return;
     }
 
-    if (!gameState || !gameState.hands) {
-        console.warn('⚠️ 游戏状态不完整');
-        container.innerHTML = '<p style="color: #999;">等待游戏数据...</p>';
+    console.log('🎴 开始渲染手牌，myPlayerIndex:', myPlayerIndex);
+
+    if (!gameState) {
+        console.warn('⚠️ gameState 为空');
+        container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">等待游戏数据...</p>';
+        return;
+    }
+
+    if (!gameState.hands) {
+        console.warn('⚠️ gameState.hands 为空');
+        container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">手牌数据加载中...</p>';
         return;
     }
 
     const hand = gameState.hands[myPlayerIndex];
     
-    if (!hand || !Array.isArray(hand)) {
-        console.error('❌ 手牌数据错误:', hand);
-        container.innerHTML = '<p style="color: #999;">手牌数据加载中...</p>';
+    console.log('🎴 我的手牌:', hand);
+
+    if (!hand) {
+        console.error('❌ 找不到我的手牌，myPlayerIndex:', myPlayerIndex, 'hands:', gameState.hands);
+        container.innerHTML = '<p style="color: #e74c3c; text-align: center; padding: 20px;">手牌数据错误，请刷新重试</p>';
+        return;
+    }
+
+    if (!Array.isArray(hand)) {
+        console.error('❌ 手牌不是数组:', typeof hand, hand);
+        container.innerHTML = '<p style="color: #e74c3c; text-align: center; padding: 20px;">手牌数据格式错误</p>';
         return;
     }
 
     if (hand.length === 0) {
-        container.innerHTML = '<p style="color: #999;">手牌已打完</p>';
+        container.innerHTML = '<p style="color: #2ecc71; text-align: center; padding: 20px; font-weight: bold;">🎉 手牌已打完！</p>';
         return;
     }
 
@@ -460,25 +488,39 @@ function renderHand() {
 
     hand.forEach((card, index) => {
         if (!card) {
-            console.warn('⚠️ 跳过空卡牌:', index);
+            console.warn('⚠️ 跳过空卡牌，索引:', index);
             return;
         }
 
-        const cardDiv = createCardElement(card, true);
-        
-        // 只有轮到自己且在出牌阶段才能点击
-        if (gameState.currentPlayer === myPlayerIndex && gameState.phase === 'playing') {
-            cardDiv.style.cursor = 'pointer';
-            cardDiv.onclick = () => selectCard(index);
-        } else {
-            cardDiv.style.cursor = 'not-allowed';
-            cardDiv.style.opacity = '0.7';
+        try {
+            const cardDiv = createCardElement(card, true);
+            
+            // 只有轮到自己且在出牌阶段才能点击
+            const isMyTurn = gameState.currentPlayer === myPlayerIndex;
+            const canPlay = gameState.phase === 'playing';
+            
+            if (isMyTurn && canPlay) {
+                cardDiv.style.cursor = 'pointer';
+                cardDiv.style.opacity = '1';
+                cardDiv.onclick = () => selectCard(index);
+                cardDiv.onmouseenter = () => {
+                    cardDiv.style.transform = 'translateY(-10px)';
+                };
+                cardDiv.onmouseleave = () => {
+                    cardDiv.style.transform = 'translateY(0)';
+                };
+            } else {
+                cardDiv.style.cursor = 'not-allowed';
+                cardDiv.style.opacity = '0.6';
+            }
+            
+            container.appendChild(cardDiv);
+        } catch (error) {
+            console.error('❌ 创建卡牌元素失败:', error, card);
         }
-        
-        container.appendChild(cardDiv);
     });
 
-    console.log('✅ 渲染手牌完成，共', hand.length, '张');
+    console.log('✅ 手牌渲染完成，共', hand.length, '张');
 }
 
 // 创建卡牌元素
@@ -938,7 +980,15 @@ function showGameResult(winner) {
 // 渲染已出的牌
 function renderPlayedCards() {
     const container = document.getElementById('played-cards');
+    if (!container) return;
+    
     container.innerHTML = '';
+
+    // 安全检查
+    if (!gameState || !gameState.played || !gameState.startPlayer === undefined) {
+        console.warn('⚠️ 游戏状态不完整，跳过渲染已出的牌');
+        return;
+    }
 
     const order = getSettlementOrder(gameState.startPlayer, gameState.direction);
 
@@ -949,7 +999,7 @@ function renderPlayedCards() {
             cardDiv.className = 'card ' + card.color;
             cardDiv.style.margin = '0 5px';
             
-            const playerName = gameState.players[playerIndex].name;
+            const playerName = gameState.players[playerIndex]?.name || '玩家' + (playerIndex + 1);
             
             // 如果还在出牌阶段或翻牌阶段，只显示展示面
             if (gameState.phase === 'playing' || gameState.phase === 'revealing') {
