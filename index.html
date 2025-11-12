@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎴 牌 - 在线对战</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div id="login-screen" class="screen">
+        <div class="container">
+            <h1>🎴 牌 - 在线对战</h1>
+            <input type="text" id="player-name" placeholder="输入你的昵称" maxlength="10">
+            <button onclick="createRoom()">创建房间</button>
+            <div class="divider">或</div>
+            <input type="text" id="room-code" placeholder="输入房间代码" maxlength="6">
+            <button onclick="joinRoom()">加入房间</button>
+        </div>
+    </div>
+
+    <!-- 等待大厅 -->
+    <div id="lobby-screen" class="screen hidden">
+        <div class="container">
+            <h2>房间代码: <span id="display-room-code"></span></h2>
+            <button onclick="copyRoomCode()">复制代码</button>
+            <h3>玩家列表 (<span id="player-count">0</span>/4)</h3>
+            <div id="player-list"></div>
+            <button id="start-btn" onclick="startGame()" disabled>开始游戏</button>
+            <button onclick="leaveRoom()">离开房间</button>
+        </div>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div id="game-screen" class="screen hidden">
+        <!-- 游戏信息栏 -->
+        <div class="game-info">
+            <div class="info-item">
+                <span>回合: <strong id="round-num">1</strong></span>
+                <span>参考点: <strong id="reference-point">1</strong></span>
+                <span>方向: <strong id="direction">⟲</strong></span>
+            </div>
+            <div class="info-item">
+                <span>当前玩家: <strong id="current-player"></strong></span>
+                <span>阶段: <strong id="game-phase">出牌中</strong></span>
+            </div>
+        </div>
+
+        <!-- 其他玩家信息 -->
+        <div class="other-players">
+            <div class="player-slot" id="player-0">
+                <div class="player-name">玩家1</div>
+                <div class="hand-count">手牌: 8</div>
+                <div class="played-card hidden"></div>
+            </div>
+            <div class="player-slot" id="player-1">
+                <div class="player-name">玩家2</div>
+                <div class="hand-count">手牌: 8</div>
+                <div class="played-card hidden"></div>
+            </div>
+            <div class="player-slot" id="player-2">
+                <div class="player-name">玩家3</div>
+                <div class="hand-count">手牌: 8</div>
+                <div class="played-card hidden"></div>
+            </div>
+        </div>
+
+        <!-- 公共区域 -->
+        <div class="play-area">
+            <div id="played-cards"></div>
+            <div id="game-log"></div>
+        </div>
+
+        <!-- 我的手牌 -->
+        <div class="my-area">
+            <h3>我的手牌</h3>
+            <div id="my-hand"></div>
+            <div id="selected-card" class="hidden">
+                <h4>选择展示面</h4>
+                <div class="card-selection">
+                    <div class="card-option" onclick="selectSide('top')">
+                        <div class="card" id="top-side"></div>
+                        <button>展示这面</button>
+                    </div>
+                    <div class="card-option" onclick="selectSide('bottom')">
+                        <div class="card" id="bottom-side"></div>
+                        <button>展示这面</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- 游戏代码 -->
+    <script src="firebase-config.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

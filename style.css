@@ -1,0 +1,407 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.screen {
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.container {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+}
+
+h1 {
+    color: #667eea;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+h2 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+input {
+    width: 100%;
+    max-width: 300px;
+    padding: 15px;
+    margin: 10px 0;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border 0.3s;
+}
+
+input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    margin: 10px 5px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+button:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.divider {
+    margin: 20px 0;
+    color: #999;
+}
+
+/* 玩家列表 */
+#player-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.player-item {
+    background: #f0f0f0;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+/* 游戏界面 */
+.game-info {
+    background: white;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.info-item {
+    display: flex;
+    gap: 20px;
+}
+
+.info-item span {
+    color: #666;
+}
+
+.info-item strong {
+    color: #667eea;
+}
+
+/* 其他玩家 */
+.other-players {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.player-slot {
+    background: white;
+    border-radius: 15px;
+    padding: 15px;
+    min-width: 150px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.player-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.hand-count {
+    color: #666;
+    font-size: 14px;
+}
+
+/* 卡牌 */
+.card {
+    width: 80px;
+    height: 120px;
+    background: white;
+    border: 3px solid #333;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+.card.red { color: #e74c3c; }
+.card.yellow { color: #f39c12; }
+.card.blue { color: #3498db; }
+.card.green { color: #2ecc71; }
+
+.card-back {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* 手牌区 */
+.my-area {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+#my-hand {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 20px 0;
+}
+
+/* 卡牌选择 */
+.card-selection {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    padding: 20px;
+}
+
+.card-option {
+    text-align: center;
+}
+
+/* 公共区域 */
+.play-area {
+    background: rgba(255,255,255,0.9);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
+    min-height: 200px;
+}
+
+#played-cards {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+#game-log {
+    max-height: 150px;
+    overflow-y: auto;
+    text-align: left;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 10px;
+}
+
+.log-entry {
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+    color: #666;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .other-players {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .card {
+        width: 60px;
+        height: 90px;
+        font-size: 18px;
+    }
+}
+/* ==================== 游戏结算优化 ==================== */
+
+.player-slot {
+    transition: all 0.3s;
+}
+
+.player-slot.active {
+    border: 3px solid #f39c12 !important;
+    box-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
+}
+
+.played-card {
+    background: #2ecc71;
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* 卡牌翻转动画 */
+@keyframes cardFlip {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(90deg); }
+    100% { transform: rotateY(0deg); }
+}
+
+.card.flipping {
+    animation: cardFlip 0.6s;
+}
+
+/* 日志条目样式 */
+.log-entry {
+    padding: 8px;
+    margin: 3px 0;
+    border-left: 3px solid #ddd;
+    background: #fafafa;
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.log-entry:last-child {
+    border-left-color: #667eea;
+    background: #f0f3ff;
+}
+
+/* 胜利动画 */
+@keyframes victory {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.victory {
+    animation: victory 1s infinite;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    .other-players {
+        flex-wrap: wrap;
+    }
+    
+    .player-slot {
+        min-width: 120px;
+        margin: 5px;
+    }
+    
+    .card {
+        width: 70px;
+        height: 100px;
+        font-size: 16px;
+    }
+    
+    #my-hand {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding: 10px;
+    }
+}
+
+/* 加载动画 */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 提示信息 */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* 按钮状态 */
+button.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+button.success {
+    background: #2ecc71;
+}
+
+button.danger {
+    background: #e74c3c;
+}
+
+button.warning {
+    background: #f39c12;
+}
