@@ -354,7 +354,12 @@ function startGameScreen(room) {
 
 // 更新游戏界面
 function updateGameScreen() {
-    if (!gameState) return;
+    if (!gameState) {
+        console.warn('⚠️ 游戏状态为空');
+        return;
+    }
+
+    console.log('🔄 更新游戏界面，我的位置:', myPlayerIndex, '游戏状态:', gameState);
 
     // 更新信息栏
     document.getElementById('round-num').textContent = gameState.round;
@@ -387,6 +392,11 @@ function updateGameScreen() {
 
 // 更新其他玩家信息
 function updateOtherPlayers() {
+    if (!gameState || !gameState.players || !gameState.hands) {
+        console.warn('⚠️ 游戏状态不完整，跳过更新其他玩家');
+        return;
+    }
+
     const otherIndexes = [0, 1, 2, 3].filter(i => i !== myPlayerIndex);
     
     otherIndexes.forEach((playerIndex, slotIndex) => {
@@ -401,11 +411,13 @@ function updateOtherPlayers() {
         
         // 显示是否已出牌
         const playedCard = slot.querySelector('.played-card');
-        if (gameState.played[playerIndex]) {
-            playedCard.classList.remove('hidden');
-            playedCard.textContent = '✓';
-        } else {
-            playedCard.classList.add('hidden');
+        if (playedCard) {
+            if (gameState.played && gameState.played[playerIndex]) {
+                playedCard.classList.remove('hidden');
+                playedCard.textContent = '✓';
+            } else {
+                playedCard.classList.add('hidden');
+            }
         }
 
         // 高亮当前玩家
@@ -419,16 +431,39 @@ function updateOtherPlayers() {
 
 // 渲染手牌
 function renderHand() {
-    const hand = gameState.hands[myPlayerIndex] || [];
     const container = document.getElementById('my-hand');
-    container.innerHTML = '';
+    if (!container) {
+        console.error('❌ 找不到手牌容器');
+        return;
+    }
+
+    if (!gameState || !gameState.hands) {
+        console.warn('⚠️ 游戏状态不完整');
+        container.innerHTML = '<p style="color: #999;">等待游戏数据...</p>';
+        return;
+    }
+
+    const hand = gameState.hands[myPlayerIndex];
+    
+    if (!hand || !Array.isArray(hand)) {
+        console.error('❌ 手牌数据错误:', hand);
+        container.innerHTML = '<p style="color: #999;">手牌数据加载中...</p>';
+        return;
+    }
 
     if (hand.length === 0) {
         container.innerHTML = '<p style="color: #999;">手牌已打完</p>';
         return;
     }
 
+    container.innerHTML = '';
+
     hand.forEach((card, index) => {
+        if (!card) {
+            console.warn('⚠️ 跳过空卡牌:', index);
+            return;
+        }
+
         const cardDiv = createCardElement(card, true);
         
         // 只有轮到自己且在出牌阶段才能点击
@@ -442,6 +477,8 @@ function renderHand() {
         
         container.appendChild(cardDiv);
     });
+
+    console.log('✅ 渲染手牌完成，共', hand.length, '张');
 }
 
 // 创建卡牌元素
