@@ -153,7 +153,8 @@ button:disabled {
     font-size: 14px;
 }
 
-/* 卡牌 */
+/* ==================== 卡牌样式优化 ==================== */
+
 .card {
     width: 80px;
     height: 120px;
@@ -170,6 +171,7 @@ button:disabled {
     transition: all 0.3s;
     position: relative;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    color: #000; /* 默认黑色 */
 }
 
 .card:hover {
@@ -177,15 +179,86 @@ button:disabled {
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
 }
 
-.card.red { color: #e74c3c; }
-.card.yellow { color: #f39c12; }
-.card.blue { color: #3498db; }
-.card.green { color: #2ecc71; }
+/* 点数卡牌的颜色（只对数字生效）*/
+.card.red { 
+    border-color: #e74c3c;
+}
 
+.card.red > div:first-child {
+    color: #e74c3c; /* 只给第一个数字上色 */
+}
+
+.card.yellow { 
+    border-color: #f39c12;
+}
+
+.card.yellow > div:first-child {
+    color: #f39c12;
+}
+
+.card.blue { 
+    border-color: #3498db;
+}
+
+.card.blue > div:first-child {
+    color: #3498db;
+}
+
+.card.green { 
+    border-color: #2ecc71;
+}
+
+.card.green > div:first-child {
+    color: #2ecc71;
+}
+
+/* 功能符号统一为黑色 */
+.card .function-symbol {
+    color: #000 !important;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* 摸牌符号（+1）特殊样式 */
+.card .draw-symbol {
+    color: #000 !important;
+    font-weight: bold;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* 转换符号样式 */
+.card .transform-symbol {
+    color: #000 !important;
+    font-weight: bold;
+    font-size: 18px;
+    font-family: 'Courier New', monospace;
+}
+
+/* Skip 符号样式 */
+.card .skip-symbol {
+    color: #000 !important;
+    font-weight: bold;
+    font-size: 16px;
+    text-transform: uppercase;
+}
+
+/* 翻转符号样式 */
+.card .flip-symbol {
+    color: #000 !important;
+    font-weight: bold;
+    font-size: 28px;
+}
+
+/* 卡牌背面 */
 .card-back {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
 }
+
+
 
 /* 手牌区 */
 .my-area {

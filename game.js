@@ -210,11 +210,11 @@ function startGame() {
     });
 }
 
+// 在 initializeGame 函数中
 function initializeGame(players) {
     const deck = createDeck();
     const shuffled = shuffleDeck(deck);
     
-    // 分发手牌（每人8张）
     const hands = [[], [], [], []];
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 4; j++) {
@@ -226,8 +226,7 @@ function initializeGame(players) {
         players: players,
         deck: shuffled,
         hands: hands,
-        played: [null, null, null, null], // ← 确保这行存在！
-        revealed: [false, false, false, false],
+        played: [null, null, null, null], // ← 必须是数组！
         currentPlayer: 0,
         startPlayer: 0,
         round: 1,
@@ -522,35 +521,72 @@ function renderHand() {
     console.log('✅ 手牌渲染完成，共', hand.length, '张');
 }
 
-// 创建卡牌元素
+// 创建卡牌元素（带样式类）
 function createCardElement(card, showBoth = false) {
     const div = document.createElement('div');
     div.className = 'card ' + card.color;
     
     if (showBoth) {
+        // 显示双面（手牌）
+        const topValue = card.top;
+        const bottomValue = card.bottom;
+        
         div.innerHTML = `
-            <div style="font-size: 18px; font-weight: bold;">${formatValue(card.top)}</div>
-            <div style="font-size: 12px; color: #999;">━━━</div>
-            <div style="font-size: 18px; font-weight: bold;">${formatValue(card.bottom)}</div>
+            ${formatCardValue(topValue, card.color)}
+            <div style="font-size: 12px; color: #999; margin: 3px 0;">━━━</div>
+            ${formatCardValue(bottomValue, card.color)}
         `;
     } else {
-        div.innerHTML = `<div style="font-size: 24px; font-weight: bold;">${formatValue(card.top)}</div>`;
+        // 只显示一面
+        const value = card.top || card.shown;
+        div.innerHTML = formatCardValue(value, card.color);
     }
     
     return div;
 }
 
-// 格式化卡牌值
-function formatValue(value) {
-    if (typeof value === 'number') return value;
-    const map = {
-        'x+1': '+1',
-        'x+2': '+2',
-        'x*2': '×2',
-        'Skip': 'Skip',
-        '+1': '+1',
-        '⇌': '⇌'
+// 格式化单个卡牌值（带CSS类）
+function formatCardValue(value, color) {
+    if (typeof value === 'number') {
+        // 数字使用对应颜色
+        const colorMap = {
+            'red': '#e74c3c',
+            'yellow': '#f39c12',
+            'blue': '#3498db',
+            'green': '#2ecc71'
+        };
+        const textColor = colorMap[color] || '#333';
+        return `<div style="font-size: 22px; font-weight: bold; color: ${textColor};">${value}</div>`;
+    }
+    
+    // 功能符号使用黑色
+    const symbolMap = {
+        'x+1': `<div class="transform-symbol">x+1</div>`,
+        'x+2': `<div class="transform-symbol">x+2</div>`,
+        'x*2': `<div class="transform-symbol">x×2</div>`,
+        'Skip': `<div class="skip-symbol">Skip</div>`,
+        '+1': `<div class="draw-symbol">🎴+1</div>`,
+        '⇌': `<div class="flip-symbol">⇌</div>`
     };
+    
+    return symbolMap[value] || `<div style="color: #000; font-weight: bold;">${value}</div>`;
+}
+
+// 格式化卡牌值（区分摸牌+1和转换x+1）
+function formatValue(value) {
+    if (typeof value === 'number') {
+        return value;
+    }
+    
+    const map = {
+        'x+1': 'x+1',      // 转换符号
+        'x+2': 'x+2',      // 转换符号
+        'x*2': 'x×2',      // 转换符号（使用×号）
+        'Skip': 'Skip',    // 跳过符号
+        '+1': '🎴+1',      // 摸牌符号（带扑克牌图案）
+        '⇌': '⇌'          // 翻转符号
+    };
+    
     return map[value] || value;
 }
 
@@ -707,21 +743,40 @@ function playCard(cardIndex, side) {
 
 // ==================== 结算系统 ====================
 
-// 翻牌阶段
+// 翻牌阶段（自动触发）
 function revealCards() {
     if (!gameState || gameState.phase !== 'revealing') {
         window.isRevealing = false;
         return;
     }
 
-    console.log('🎴 翻牌阶段');
+    console.log('🎴 翻牌阶段开始');
     
-    // 直接进入结算阶段
+    // 验证所有玩家都已出牌
+    let allPlayed = true;
+    for (let i = 0; i < 4; i++) {
+        if (!gameState.played[i]) {
+            console.error('❌ 玩家', i, '还没出牌！');
+            allPlayed = false;
+        }
+    }
+
+    if (!allPlayed) {
+        console.error('❌ 不是所有人都出牌了，返回出牌阶段');
+        gameRef.update({ phase: 'playing' });
+        window.isRevealing = false;
+        return;
+    }
+    
+    // 进入结算阶段
+    const newLog = [...gameState.log, '━━━━━━ 开始结算 ━━━━━━'];
+    
     gameRef.update({
         phase: 'settling',
         settleIndex: gameState.startPlayer,
-        log: [...gameState.log, '━━━━━━ 开始结算 ━━━━━━']
+        log: newLog
     }).then(() => {
+        console.log('✅ 进入结算阶段，从玩家', gameState.startPlayer, '开始');
         window.isRevealing = false;
     });
 }
@@ -734,64 +789,80 @@ function settleNextPlayer() {
     }
 
     const playerIndex = gameState.settleIndex;
-    const playedCard = gameState.played[playerIndex];
     
-    if (!playedCard) {
-        console.error('❌ 结算错误：玩家', playerIndex, '没有出牌');
+    console.log('⚖️ 开始结算玩家', playerIndex);
+
+    // 严格验证
+    if (!gameState.played || !Array.isArray(gameState.played)) {
+        console.error('❌ gameState.played 不是数组！');
         window.isSettling = false;
         return;
     }
 
-    console.log('⚖️ 结算玩家', playerIndex);
+    const playedCard = gameState.played[playerIndex];
+    
+    if (!playedCard) {
+        console.error('❌ 玩家', playerIndex, '没有出牌数据');
+        window.isSettling = false;
+        return;
+    }
 
-    // 执行结算
+    console.log('🎴 结算卡牌:', playedCard);
+
+    // 执行结算计算
     const result = calculateSettle(playedCard, gameState.referencePoint);
     
+    console.log('📊 结算结果:', result);
+
     const updates = {};
     const newLog = [...gameState.log];
-    const playerName = gameState.players[playerIndex].name;
+    const playerName = gameState.players[playerIndex]?.name || '玩家' + (playerIndex + 1);
 
     // 添加结算日志
-    newLog.push(`${playerName} 隐藏：${formatValue(playedCard.hidden)} | 参考点：${gameState.referencePoint}`);
+    newLog.push(`【${playerName}】隐藏：${formatValue(playedCard.hidden)} | 展示：${formatValue(playedCard.shown)} | 参考点：${gameState.referencePoint}`);
 
     // 处理结算结果
     let newReferencePoint = gameState.referencePoint;
     
     if (result.skipDraw) {
-        newLog.push(`└─ ${result.reason}`);
+        // 跳过摸牌情况（Skip、转换符号）
+        newLog.push(`  └─ ${result.reason}`);
         if (result.newReference !== undefined) {
             newReferencePoint = result.newReference;
-            newLog.push(`└─ 参考点更新：${gameState.referencePoint} → ${newReferencePoint}`);
+            if (newReferencePoint !== gameState.referencePoint) {
+                newLog.push(`  └─ 参考点更新：${gameState.referencePoint} → ${newReferencePoint}`);
+            }
         }
     } else {
+        // 正常判定
         if (result.needDraw) {
-            newLog.push(`└─ 结算点${result.settlePoint} < 参考点${gameState.referencePoint}，摸1张 ✗`);
+            newLog.push(`  └─ 结算点 ${result.settlePoint} < 参考点 ${gameState.referencePoint}，摸1张 ✗`);
             
             // 摸牌
-            if (gameState.deck.length > 0) {
+            if (gameState.deck && gameState.deck.length > 0) {
                 const drawnCard = gameState.deck[gameState.deck.length - 1];
                 const newDeck = gameState.deck.slice(0, -1);
                 const newHand = [...gameState.hands[playerIndex], drawnCard];
                 
-                updates[`deck`] = newDeck;
+                updates['deck'] = newDeck;
                 updates[`hands/${playerIndex}`] = newHand;
-                newLog.push(`└─ 剩余牌堆：${newDeck.length}张`);
+                newLog.push(`  └─ 摸牌后手牌：${newHand.length}张，牌堆剩余：${newDeck.length}张`);
             } else {
-                newLog.push(`└─ 牌堆已空！`);
+                newLog.push(`  └─ 牌堆已空，无法摸牌`);
             }
         } else {
-            newLog.push(`└─ 结算点${result.settlePoint} ≥ 参考点${gameState.referencePoint}，不摸牌 ✓`);
+            newLog.push(`  └─ 结算点 ${result.settlePoint} ≥ 参考点 ${gameState.referencePoint}，不摸牌 ✓`);
         }
         
         newReferencePoint = result.settlePoint;
-        newLog.push(`└─ 参考点更新：${gameState.referencePoint} → ${newReferencePoint}`);
+        newLog.push(`  └─ 参考点更新：${gameState.referencePoint} → ${newReferencePoint}`);
     }
 
     updates['referencePoint'] = newReferencePoint;
 
-    // 处理展示面效果
+    // 处理展示面效果（+1、翻转）
     const effectResult = applyShownEffect(playedCard, playerIndex, gameState);
-    if (effectResult.log) {
+    if (effectResult.log && effectResult.log.length > 0) {
         newLog.push(...effectResult.log);
     }
     if (effectResult.updates) {
@@ -804,8 +875,11 @@ function settleNextPlayer() {
     const settlementOrder = getSettlementOrder(gameState.startPlayer, gameState.direction);
     const currentIndex = settlementOrder.indexOf(playerIndex);
     
+    console.log('📍 结算进度:', currentIndex + 1, '/', settlementOrder.length);
+    
     if (currentIndex === 3) {
         // 最后一个人，回合结束
+        console.log('🏁 回合结算完成');
         newLog.push('━━━━━━ 回合结束 ━━━━━━');
         updates['log'] = newLog;
         updates['phase'] = 'round-end';
@@ -816,7 +890,9 @@ function settleNextPlayer() {
         });
     } else {
         // 下一个人
-        updates['settleIndex'] = settlementOrder[currentIndex + 1];
+        const nextPlayerIndex = settlementOrder[currentIndex + 1];
+        updates['settleIndex'] = nextPlayerIndex;
+        console.log('👉 下一个结算玩家:', nextPlayerIndex);
         
         gameRef.update(updates).then(() => {
             window.isSettling = false;
@@ -824,16 +900,18 @@ function settleNextPlayer() {
     }
 }
 
-// 计算结算
+// 计算结算（完全符合游戏规则）
 function calculateSettle(card, referencePoint) {
     const hidden = card.hidden;
     const shown = card.shown;
+
+    console.log('🧮 计算结算: 隐藏=', hidden, '展示=', shown, '参考点=', referencePoint);
 
     // 情况1：隐藏为Skip
     if (hidden === 'Skip') {
         return {
             skipDraw: true,
-            reason: 'Skip保护，不摸牌，参考点不变',
+            reason: 'Skip保护：不摸牌，参考点不变',
             newReference: referencePoint // 保持不变
         };
     }
@@ -841,32 +919,48 @@ function calculateSettle(card, referencePoint) {
     // 情况2：隐藏为转换符号
     if (['x+1', 'x+2', 'x*2'].includes(hidden)) {
         let newRef = referencePoint;
+        let opName = '';
         
         if (hidden === 'x+1') {
-            newRef = referencePoint + 1;
+            newRef = Math.min(referencePoint + 1, 10);
+            opName = '+1';
         } else if (hidden === 'x+2') {
-            newRef = referencePoint + 2;
+            newRef = Math.min(referencePoint + 2, 10);
+            opName = '+2';
         } else if (hidden === 'x*2') {
             newRef = Math.min(referencePoint * 2, 10);
+            opName = '×2';
         }
 
         return {
             skipDraw: true,
-            reason: `${formatValue(hidden)} 保护，不摸牌`,
+            reason: `${formatValue(hidden)}保护：不摸牌，参考点${opName}`,
             newReference: newRef
         };
     }
 
     // 情况3：隐藏为点数
+    if (typeof hidden !== 'number') {
+        console.error('❌ 隐藏面不是点数也不是功能:', hidden);
+        return {
+            skipDraw: false,
+            needDraw: false,
+            settlePoint: 1
+        };
+    }
+
     let settlePoint = hidden;
 
     // 如果展示为转换符号，修改结算点数
     if (shown === 'x+1') {
-        settlePoint = hidden + 1;
+        settlePoint = Math.min(hidden + 1, 10);
+        console.log('  💫 展示x+1:', hidden, '→', settlePoint);
     } else if (shown === 'x+2') {
-        settlePoint = hidden + 2;
+        settlePoint = Math.min(hidden + 2, 10);
+        console.log('  💫 展示x+2:', hidden, '→', settlePoint);
     } else if (shown === 'x*2') {
         settlePoint = Math.min(hidden * 2, 10);
+        console.log('  💫 展示x×2:', hidden, '→', settlePoint);
     }
 
     // 比较参考点
@@ -879,49 +973,72 @@ function calculateSettle(card, referencePoint) {
     };
 }
 
-// 应用展示面效果
+// 应用展示面效果（+1、翻转）
 function applyShownEffect(card, playerIndex, state) {
     const shown = card.shown;
     const updates = {};
     const log = [];
 
+    console.log('✨ 检查展示面效果:', shown);
+
     // +1效果
     if (shown === '+1') {
-        log.push(`💥 +1效果触发！`);
+        log.push('  💥 +1效果触发！');
         
         const order = getSettlementOrder(state.startPlayer, state.direction);
         const currentPos = order.indexOf(playerIndex);
         const prevPlayer = order[(currentPos - 1 + 4) % 4];
         const nextPlayer = order[(currentPos + 1) % 4];
 
-        // 前家摸1张
-        if (state.deck.length > 0) {
-            const card1 = state.deck[state.deck.length - 1];
-            updates[`deck`] = state.deck.slice(0, -1);
-            updates[`hands/${prevPlayer}`] = [...state.hands[prevPlayer], card1];
-            log.push(`└─ ${state.players[prevPlayer].name}（前家）摸1张`);
-        }
+        console.log('  前家:', prevPlayer, '后家:', nextPlayer);
 
-        // 后家摸1张
-        if (state.deck.length > 1) {
-            const card2 = state.deck[state.deck.length - 2];
-            updates[`deck`] = state.deck.slice(0, -2);
-            updates[`hands/${nextPlayer}`] = [...state.hands[nextPlayer], card2];
-            log.push(`└─ ${state.players[nextPlayer].name}（后家）摸1张`);
+        // 前家摸1张
+        if (state.deck && state.deck.length > 0) {
+            const card1 = state.deck[state.deck.length - 1];
+            const newDeck1 = state.deck.slice(0, -1);
+            const newHand1 = [...state.hands[prevPlayer], card1];
+            
+            updates['deck'] = newDeck1;
+            updates[`hands/${prevPlayer}`] = newHand1;
+            
+            const prevName = state.players[prevPlayer]?.name || '玩家' + (prevPlayer + 1);
+            log.push(`  └─ ${prevName}（前家）摸1张`);
+
+            // 后家摸1张
+            if (newDeck1.length > 0) {
+                const card2 = newDeck1[newDeck1.length - 1];
+                const newDeck2 = newDeck1.slice(0, -1);
+                const newHand2 = [...state.hands[nextPlayer], card2];
+                
+                updates['deck'] = newDeck2;
+                updates[`hands/${nextPlayer}`] = newHand2;
+                
+                const nextName = state.players[nextPlayer]?.name || '玩家' + (nextPlayer + 1);
+                log.push(`  └─ ${nextName}（后家）摸1张`);
+            } else {
+                log.push(`  └─ 牌堆不足，后家无法摸牌`);
+            }
+        } else {
+            log.push(`  └─ 牌堆已空，前后家无法摸牌`);
         }
     }
 
     // 翻转效果
     if (shown === '⇌') {
-        log.push(`🔄 翻转效果：下回合方向改变`);
+        log.push('  🔄 翻转效果：下回合方向改变');
         updates['flipNext'] = true;
     }
 
     return { updates, log };
 }
 
-// 获取结算顺序
+// 获取结算顺序（按出牌顺序）
 function getSettlementOrder(startPlayer, direction) {
+    if (startPlayer === undefined || startPlayer === null) {
+        console.error('❌ startPlayer 未定义，默认为0');
+        startPlayer = 0;
+    }
+
     const order = [];
     let current = startPlayer;
     
@@ -930,6 +1047,7 @@ function getSettlementOrder(startPlayer, direction) {
         current = getNextPlayer(current, direction);
     }
     
+    console.log('📋 结算顺序:', order, '方向:', direction);
     return order;
 }
 
@@ -958,7 +1076,7 @@ function getNextPlayer(current, direction) {
 function startNextRound() {
     if (!gameState) return;
 
-    console.log('🔄 开始新回合');
+    console.log('🔄 准备开始新回合');
 
     const updates = {};
     const newLog = [...gameState.log];
@@ -967,27 +1085,35 @@ function startNextRound() {
     let newDirection = gameState.direction;
     if (gameState.flipNext) {
         newDirection = gameState.direction === 'ccw' ? 'cw' : 'ccw';
-        newLog.push(`🔄 方向改变：${newDirection === 'ccw' ? '逆时针' : '顺时针'}`);
+        const dirText = newDirection === 'ccw' ? '逆时针 ⟲' : '顺时针 ⟳';
+        newLog.push(`🔄 方向改变：${dirText}`);
         updates['flipNext'] = false;
     }
 
     // 下一个启始玩家
     const nextStart = getNextPlayer(gameState.startPlayer, newDirection);
 
+    newLog.push('━━━━━━━━━━━━━━━━━━━━');
+    newLog.push(`🎴 第 ${gameState.round + 1} 回合开始`);
+    newLog.push(`📍 启始玩家：${gameState.players[nextStart]?.name || '玩家' + (nextStart + 1)}`);
+
     updates['round'] = gameState.round + 1;
     updates['phase'] = 'playing';
-    updates['played'] = [null, null, null, null];
+    updates['played'] = [null, null, null, null]; // ← 重置为数组！
     updates['referencePoint'] = 1;
     updates['currentPlayer'] = nextStart;
     updates['startPlayer'] = nextStart;
     updates['direction'] = newDirection;
     updates['settleIndex'] = nextStart;
-    
-    newLog.push('━━━━━━━━━━━━━━━━━━━━');
-    newLog.push(`🎴 第${gameState.round + 1}回合开始`);
     updates['log'] = newLog;
 
-    gameRef.update(updates);
+    console.log('📤 更新数据:', updates);
+
+    gameRef.update(updates).then(() => {
+        console.log('✅ 新回合开始成功');
+    }).catch(err => {
+        console.error('❌ 开始新回合失败:', err);
+    });
 }
 
 // ==================== 胜利判定 ====================
@@ -1041,29 +1167,11 @@ function renderPlayedCards() {
     
     container.innerHTML = '';
 
-    // 严格的安全检查
-    if (!gameState) {
-        console.warn('⚠️ gameState 为空');
+    if (!gameState || !gameState.played || !Array.isArray(gameState.played)) {
         return;
     }
 
-    if (!gameState.played) {
-        console.warn('⚠️ gameState.played 为空');
-        return;
-    }
-
-    if (!Array.isArray(gameState.played)) {
-        console.error('❌ gameState.played 不是数组:', typeof gameState.played, gameState.played);
-        return;
-    }
-
-    if (gameState.startPlayer === undefined || gameState.startPlayer === null) {
-        console.warn('⚠️ startPlayer 未定义');
-        return;
-    }
-
-    if (!gameState.direction) {
-        console.warn('⚠️ direction 未定义');
+    if (gameState.startPlayer === undefined || !gameState.direction) {
         return;
     }
 
@@ -1084,15 +1192,21 @@ function renderPlayedCards() {
             
             // 根据游戏阶段显示不同内容
             if (gameState.phase === 'playing' || gameState.phase === 'revealing') {
+                // 只显示展示面
                 cardDiv.innerHTML = `
-                    <div style="font-size: 24px; font-weight: bold;">${formatValue(card.shown)}</div>
-                    <div style="font-size: 10px; color: #666; margin-top: 5px;">${playerName}</div>
+                    ${formatCardValue(card.shown, card.color)}
+                    <div style="font-size: 10px; color: #666; margin-top: 8px;">${playerName}</div>
                 `;
             } else {
+                // 结算阶段，显示双面
                 cardDiv.innerHTML = `
-                    <div style="font-size: 16px; font-weight: bold;">${formatValue(card.shown)}</div>
-                    <div style="font-size: 12px; color: #999;">━━━</div>
-                    <div style="font-size: 16px; font-weight: bold; color: #e74c3c;">${formatValue(card.hidden)}</div>
+                    <div style="font-size: 14px; margin-bottom: 3px;">
+                        ${formatCardValue(card.shown, card.color)}
+                    </div>
+                    <div style="font-size: 10px; color: #999;">━━━</div>
+                    <div style="font-size: 14px; margin-top: 3px; padding: 3px; background: #fff3cd; border-radius: 3px;">
+                        ${formatCardValue(card.hidden, card.color)}
+                    </div>
                     <div style="font-size: 10px; color: #666; margin-top: 5px;">${playerName}</div>
                 `;
             }
