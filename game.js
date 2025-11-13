@@ -210,7 +210,6 @@ function startGame() {
     });
 }
 
-// 初始化游戏数据
 function initializeGame(players) {
     const deck = createDeck();
     const shuffled = shuffleDeck(deck);
@@ -227,12 +226,12 @@ function initializeGame(players) {
         players: players,
         deck: shuffled,
         hands: hands,
-        played: [null, null, null, null],
+        played: [null, null, null, null], // ← 确保这行存在！
         revealed: [false, false, false, false],
         currentPlayer: 0,
         startPlayer: 0,
         round: 1,
-        phase: 'playing', // playing, revealing, settling, finished
+        phase: 'playing',
         referencePoint: 1,
         direction: 'ccw',
         flipNext: false,
@@ -597,7 +596,12 @@ function selectCard(index) {
 
 // 选择展示面
 function selectSide(side) {
-    if (window.selectedCardIndex === undefined) return;
+    console.log('👆 选择展示面:', side, '卡牌索引:', window.selectedCardIndex);
+    
+    if (window.selectedCardIndex === undefined) {
+        console.error('❌ 没有选中的卡牌');
+        return;
+    }
     
     playCard(window.selectedCardIndex, side);
     
@@ -608,14 +612,44 @@ function selectSide(side) {
 
 // 出牌
 function playCard(cardIndex, side) {
+    console.log('🎴 出牌：索引', cardIndex, '展示面', side);
+
+    // 严格的数据验证
+    if (!gameState) {
+        console.error('❌ gameState 不存在');
+        alert('游戏状态错误，请刷新页面');
+        return;
+    }
+
+    if (!gameState.hands || !Array.isArray(gameState.hands)) {
+        console.error('❌ gameState.hands 不存在或不是数组');
+        alert('手牌数据错误，请刷新页面');
+        return;
+    }
+
+    if (!gameState.hands[myPlayerIndex]) {
+        console.error('❌ 我的手牌不存在');
+        alert('手牌数据错误，请刷新页面');
+        return;
+    }
+
     const card = gameState.hands[myPlayerIndex][cardIndex];
     
+    if (!card) {
+        console.error('❌ 卡牌不存在，索引', cardIndex);
+        alert('卡牌数据错误');
+        return;
+    }
+
+    // 构建出牌数据
     const playedCard = {
         ...card,
         shown: side === 'top' ? card.top : card.bottom,
         hidden: side === 'top' ? card.bottom : card.top,
         playerIndex: myPlayerIndex
     };
+
+    console.log('📤 出牌数据:', playedCard);
 
     // 构建更新
     const updates = {};
@@ -628,18 +662,21 @@ function playCard(cardIndex, side) {
     updates[`hands/${myPlayerIndex}`] = newHand;
     
     // 添加日志
-    const playerName = gameState.players[myPlayerIndex].name;
+    const playerName = gameState.players[myPlayerIndex]?.name || '玩家' + (myPlayerIndex + 1);
     const newLog = [...(gameState.log || []), `${playerName} 出牌：展示 ${formatValue(playedCard.shown)}`];
     updates['log'] = newLog;
     
-    // 检查是否所有人都出完牌
-    // 检查是否所有人都出完牌
-    const playedCount = (gameState.played && Array.isArray(gameState.played))
-    ? gameState.played.filter(p => p !== null).length 
-    : 0;
+    // 安全地检查已出牌数量
+    let playedCount = 0;
+    if (gameState.played && Array.isArray(gameState.played)) {
+        playedCount = gameState.played.filter(p => p !== null && p !== undefined).length;
+    }
     
-    if (playedCount === 3) {
-        // 最后一个人出牌，进入翻牌阶段
+    console.log('📊 当前已出牌数量:', playedCount, '我是第', playedCount + 1, '个出牌');
+    
+    if (playedCount >= 3) {
+        // 我是最后一个出牌的，进入翻牌阶段
+        console.log('🎴 所有人出牌完毕，进入翻牌阶段');
         updates['phase'] = 'revealing';
         updates['settleIndex'] = gameState.startPlayer;
         newLog.push('━━━━━━ 开始翻牌 ━━━━━━');
@@ -648,19 +685,23 @@ function playCard(cardIndex, side) {
         // 下一个玩家
         const nextPlayer = getNextPlayer(gameState.currentPlayer, gameState.direction);
         updates['currentPlayer'] = nextPlayer;
+        console.log('👉 下一个玩家:', nextPlayer);
     }
 
     // 应用更新
+    console.log('💾 准备更新数据库:', updates);
+    
     gameRef.update(updates).then(() => {
         console.log('✅ 出牌成功');
         
         // 检查胜利
         if (newHand.length === 0) {
+            console.log('🏆 我赢了！');
             declareWinner(myPlayerIndex);
         }
     }).catch(err => {
         console.error('❌ 出牌失败:', err);
-        alert('出牌失败，请重试');
+        alert('出牌失败：' + err.message + '\n请重试或刷新页面');
     });
 }
 
@@ -894,6 +935,16 @@ function getSettlementOrder(startPlayer, direction) {
 
 // 获取下一个玩家
 function getNextPlayer(current, direction) {
+    if (current === undefined || current === null) {
+        console.error('❌ current 未定义，默认为0');
+        current = 0;
+    }
+    
+    if (!direction) {
+        console.warn('⚠️ direction 未定义，默认为逆时针');
+        direction = 'ccw';
+    }
+    
     if (direction === 'ccw') {
         return (current + 1) % 4;
     } else {
