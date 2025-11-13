@@ -8,28 +8,60 @@
 </head>
 <body>
     <!-- 登录界面 -->
-    <div id="login-screen" class="screen">
-        <div class="container">
-            <h1>🎴 牌 - 在线对战</h1>
-            <input type="text" id="player-name" placeholder="输入你的昵称" maxlength="10">
-            <button onclick="createRoom()">创建房间</button>
-            <div class="divider">或</div>
-            <input type="text" id="room-code" placeholder="输入房间代码" maxlength="6">
-            <button onclick="joinRoom()">加入房间</button>
+<div id="login-screen" class="screen">
+    <div class="container">
+        <h1>🎴 牌 - 在线对战</h1>
+        <input type="text" id="player-name" placeholder="输入你的昵称" maxlength="10">
+        
+        <!-- 新增：牌库选择 -->
+        <div class="deck-selection">
+            <h3>选择牌库</h3>
+            <div class="deck-options">
+                <label class="deck-option">
+                    <input type="radio" name="deck-type" value="108" checked>
+                    <div class="deck-card">
+                        <div class="deck-title">🎴 标准版</div>
+                        <div class="deck-info">108张牌</div>
+                        <div class="deck-desc">自由随机<br>游戏时长15-25分钟</div>
+                    </div>
+                </label>
+                <label class="deck-option">
+                    <input type="radio" name="deck-type" value="76">
+                    <div class="deck-card recommended">
+                        <div class="deck-title">⚡ 竞技版</div>
+                        <div class="deck-info">76张牌</div>
+                        <div class="deck-desc">逻辑节奏<br>游戏时长15-20分钟</div>
+                        <div class="recommended-badge">推荐</div>
+                    </div>
+                </label>
+            </div>
         </div>
+        
+        <button onclick="createRoom()">创建房间</button>
+        <div class="divider">或</div>
+        <input type="text" id="room-code" placeholder="输入房间代码" maxlength="6">
+        <button onclick="joinRoom()">加入房间</button>
     </div>
+</div>
 
     <!-- 等待大厅 -->
-    <div id="lobby-screen" class="screen hidden">
-        <div class="container">
-            <h2>房间代码: <span id="display-room-code"></span></h2>
-            <button onclick="copyRoomCode()">复制代码</button>
-            <h3>玩家列表 (<span id="player-count">0</span>/4)</h3>
-            <div id="player-list"></div>
-            <button id="start-btn" onclick="startGame()" disabled>开始游戏</button>
-            <button onclick="leaveRoom()">离开房间</button>
+<div id="lobby-screen" class="screen hidden">
+    <div class="container">
+        <h2>房间代码: <span id="display-room-code"></span></h2>
+        <button onclick="copyRoomCode()">复制代码</button>
+        
+        <!-- 新增：房间设置显示 -->
+        <div class="room-settings">
+            <span>🎴 牌库：<strong id="room-deck-type">108张标准版</strong></span>
+            <span>🃏 手牌：<strong>8张</strong></span>
         </div>
+        
+        <h3>玩家列表 (<span id="player-count">0</span>/4)</h3>
+        <div id="player-list"></div>
+        <button id="start-btn" onclick="startGame()" disabled>开始游戏</button>
+        <button onclick="leaveRoom()">离开房间</button>
     </div>
+</div>
 
     <!-- 游戏界面 -->
     <div id="game-screen" class="screen hidden">

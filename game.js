@@ -28,6 +28,11 @@ function createRoom() {
         return;
     }
 
+    // 获取选择的牌库类型
+    const deckType = document.querySelector('input[name="deck-type"]:checked').value;
+    
+    console.log('🎴 选择的牌库:', deckType === '108' ? '108张标准版' : '76张快速版');
+
     const roomCode = generateRoomCode();
     currentRoom = roomCode;
     currentPlayer = {
@@ -37,6 +42,7 @@ function createRoom() {
 
     const roomData = {
         host: currentPlayer.id,
+        deckType: deckType, // ← 保存牌库类型
         players: {
             [currentPlayer.id]: {
                 name: playerName,
@@ -49,7 +55,7 @@ function createRoom() {
     };
 
     database.ref('rooms/' + roomCode).set(roomData).then(() => {
-        console.log('✅ 房间创建成功:', roomCode);
+        console.log('✅ 房间创建成功:', roomCode, '牌库:', deckType);
         joinLobby(roomCode);
     }).catch(err => {
         console.error('❌ 创建房间失败:', err);
@@ -149,6 +155,15 @@ function updateLobby(room) {
     
     document.getElementById('player-count').textContent = playerCount;
 
+    // 显示牌库类型
+    const deckTypeText = room.deckType === '76' 
+        ? '76张快速版 ⚡' 
+        : '108张标准版';
+    const deckTypeElem = document.getElementById('room-deck-type');
+    if (deckTypeElem) {
+        deckTypeElem.textContent = deckTypeText;
+    }
+
     const playerList = document.getElementById('player-list');
     playerList.innerHTML = '';
     
@@ -193,15 +208,18 @@ function startGame() {
 
     console.log('🎲 游戏开始！');
     
-    // 获取玩家顺序
-    database.ref('rooms/' + currentRoom + '/players').once('value').then(snapshot => {
-        const players = snapshot.val();
+    // 获取玩家顺序和牌库类型
+    database.ref('rooms/' + currentRoom).once('value').then(snapshot => {
+        const room = snapshot.val();
+        const players = room.players;
+        const deckType = room.deckType || '108'; // ← 获取牌库类型
+        
         const playerOrder = Object.entries(players)
             .sort((a, b) => a[1].index - b[1].index)
             .map(([id, data]) => ({ id, name: data.name }));
 
-        // 初始化游戏状态
-        const gameData = initializeGame(playerOrder);
+        // 初始化游戏状态（传递牌库类型）
+        const gameData = initializeGame(playerOrder, deckType);
         
         database.ref('rooms/' + currentRoom).update({
             status: 'playing',
@@ -210,23 +228,29 @@ function startGame() {
     });
 }
 
-// 在 initializeGame 函数中
-function initializeGame(players) {
-    const deck = createDeck();
+// 初始化游戏数据
+function initializeGame(players, deckType) {
+    console.log('🎲 初始化游戏，牌库类型:', deckType);
+    
+    const deck = createDeck(deckType); // ← 使用选定的牌库
     const shuffled = shuffleDeck(deck);
     
+    // 分发手牌（每人8张）
     const hands = [[], [], [], []];
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 4; j++) {
-            hands[j].push(shuffled.pop());
+            if (shuffled.length > 0) {
+                hands[j].push(shuffled.pop());
+            }
         }
     }
 
     return {
         players: players,
+        deckType: deckType, // ← 保存牌库类型
         deck: shuffled,
         hands: hands,
-        played: [null, null, null, null], // ← 必须是数组！
+        played: [null, null, null, null],
         currentPlayer: 0,
         startPlayer: 0,
         round: 1,
@@ -234,26 +258,39 @@ function initializeGame(players) {
         referencePoint: 1,
         direction: 'ccw',
         flipNext: false,
-        log: ['🎮 游戏开始！'],
+        log: [`🎮 游戏开始！牌库：${deckType === '76' ? '76张快速版' : '108张标准版'}`],
         settleIndex: 0
     };
 }
 
 // ==================== 卡牌系统 ====================
 
-// 创建牌堆
-function createDeck() {
+// ==================== 牌库系统 ====================
+
+// 创建牌堆（根据类型）
+function createDeck(deckType = '108') {
+    if (deckType === '76') {
+        return createDeck76();
+    }
+    return createDeck108();
+}
+
+// ==================== 108张标准牌库 ====================
+
+function createDeck108() {
     const deck = [];
     const colors = ['red', 'yellow', 'blue', 'green'];
 
-    // 同值基本牌 (1-10, 每个4张)
+    console.log('🎴 创建108张标准牌库');
+
+    // 1. 同值基本牌 (1-10, 每个4张)
     for (let i = 1; i <= 10; i++) {
         colors.forEach(color => {
             deck.push({ top: i, bottom: i, color: color, type: 'basic' });
         });
     }
 
-    // 异值基本牌 - 标准组合
+    // 2. 异值基本牌 - 标准组合
     const pairs = [[2,4], [4,6], [6,8], [8,10], [1,3], [3,5], [5,7], [7,9]];
     pairs.forEach(pair => {
         colors.forEach(color => {
@@ -261,48 +298,115 @@ function createDeck() {
         });
     });
 
-    // 特殊异值
+    // 3. 特殊异值
     deck.push({ top: 2, bottom: 10, color: 'red', type: 'basic' });
     deck.push({ top: 2, bottom: 10, color: 'blue', type: 'basic' });
     deck.push({ top: 1, bottom: 9, color: 'yellow', type: 'basic' });
     deck.push({ top: 1, bottom: 9, color: 'green', type: 'basic' });
 
-    // x+1 (5-8)
+    // 4. x+1 (5-8)
     [5,6,7,8].forEach((num, i) => {
         deck.push({ top: num, bottom: 'x+1', color: colors[i], type: 'function' });
     });
 
-    // x+2 (1-4)
+    // 5. x+2 (1-4)
     [1,2,3,4].forEach((num, i) => {
         deck.push({ top: num, bottom: 'x+2', color: colors[i], type: 'function' });
     });
 
-    // x*2 (1-4)
+    // 6. x*2 (1-4)
     [1,2,3,4].forEach((num, i) => {
         deck.push({ top: num, bottom: 'x*2', color: colors[i], type: 'function' });
     });
 
-    // Skip (5-8, 4张)
+    // 7. Skip (5-8)
     [5,6,7,8].forEach((num, i) => {
         deck.push({ top: num, bottom: 'Skip', color: colors[i], type: 'function' });
     });
 
-    // +1 (1-8, 8张) - 注意：存储为 '+1' 而不是 '🎴+1'
+    // 8. +1 (1-8, 8张)
     [1,2,3,4,5,6,7,8].forEach((num, i) => {
-        deck.push({ 
-        top: num, 
-        bottom: '+1',  // ← 存储为 '+1'
-        color: colors[i % 4], 
-        type: 'function' 
+        deck.push({ top: num, bottom: '+1', color: colors[i % 4], type: 'function' });
     });
-});
 
-    // 翻转 (1-8, 8张)
+    
+    // 9. 翻转 (1-8, 8张)
     [1,2,3,4,5,6,7,8].forEach((num, i) => {
         deck.push({ top: num, bottom: '⇌', color: colors[i % 4], type: 'function' });
     });
 
-    console.log('🎴 牌堆创建完成，共', deck.length, '张');
+    console.log('✅ 108张标准牌库创建完成');
+    return deck;
+}
+
+// ==================== 76张快速牌库 ====================
+
+function createDeck76() {
+    const deck = [];
+    const colors = ['red', 'yellow', 'blue', 'green'];
+
+    console.log('⚡ 创建76张快速牌库');
+
+    // 1. 同值基本牌（20张）- 对称分配
+    const sameValueCards = [
+        { num: 1, colors: ['red', 'blue'] },
+        { num: 2, colors: ['yellow', 'green'] },
+        { num: 3, colors: ['red', 'yellow'] },
+        { num: 4, colors: ['blue', 'green'] },
+        { num: 5, colors: ['red', 'yellow'] },
+        { num: 6, colors: ['blue', 'green'] },
+        { num: 7, colors: ['red', 'blue'] },
+        { num: 8, colors: ['yellow', 'green'] },
+        { num: 9, colors: ['red', 'yellow'] },
+        { num: 10, colors: ['blue', 'green'] }
+    ];
+
+    sameValueCards.forEach(item => {
+        item.colors.forEach(color => {
+            deck.push({ top: item.num, bottom: item.num, color: color, type: 'basic' });
+        });
+    });
+
+    // 2. 异值基本牌（36张）- 保持不变
+    const pairs = [[2,4], [4,6], [6,8], [8,10], [1,3], [3,5], [5,7], [7,9]];
+    pairs.forEach(pair => {
+        colors.forEach(color => {
+            deck.push({ top: pair[0], bottom: pair[1], color: color, type: 'basic' });
+        });
+    });
+
+    // 3. 特殊异值
+    deck.push({ top: 2, bottom: 10, color: 'red', type: 'basic' });
+    deck.push({ top: 2, bottom: 10, color: 'blue', type: 'basic' });
+    deck.push({ top: 1, bottom: 9, color: 'yellow', type: 'basic' });
+    deck.push({ top: 1, bottom: 9, color: 'green', type: 'basic' });
+
+    // 4. x+1 (5-8, 4张)
+    [5,6,7,8].forEach((num, i) => {
+        deck.push({ top: num, bottom: 'x+1', color: colors[i], type: 'function' });
+    });
+
+    // 5. x+2 (1-4, 4张)
+    [1,2,3,4].forEach((num, i) => {
+        deck.push({ top: num, bottom: 'x+2', color: colors[i], type: 'function' });
+    });
+
+    // 6. Skip (1-4, 4张) - 点数改为1-4
+    [1,2,3,4].forEach((num, i) => {
+        deck.push({ top: num, bottom: 'Skip', color: colors[i], type: 'function' });
+    });
+
+    // 7. +1 (1-4, 4张) - 减半
+    [1,2,3,4].forEach((num, i) => {
+        deck.push({ top: num, bottom: '+1', color: colors[i], type: 'function' });
+    });
+
+    // 8. 翻转 (5-8, 4张) - 减半
+    [5,6,7,8].forEach((num, i) => {
+        deck.push({ top: num, bottom: '⇌', color: colors[i], type: 'function' });
+    });
+
+    console.log('✅ 76张快速牌库创建完成');
     return deck;
 }
 
@@ -368,8 +472,9 @@ function updateGameScreen() {
     document.getElementById('round-num').textContent = gameState.round;
     document.getElementById('reference-point').textContent = gameState.referencePoint;
     
-    // 更新方向显示
-    const directionText = gameState.direction === 'ccw' ? '⟲ 逆时针' : '⟳ 顺时针';
+    // 更新方向显示（添加牌库信息）
+    const deckInfo = gameState.deckType === '76' ? ' | 快速版⚡' : ' | 标准版';
+    const directionText = (gameState.direction === 'ccw' ? '⟲ 逆时针' : '⟳ 顺时针') + deckInfo;
     document.getElementById('direction').textContent = directionText;
     
     const currentPlayerName = gameState.players[gameState.currentPlayer]?.name || '未知';

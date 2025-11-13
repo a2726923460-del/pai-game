@@ -496,3 +496,131 @@ button.warning {
         font-size: 14px;
     }
 }
+
+/* ==================== 牌库选择样式 ==================== */
+
+.deck-selection {
+    margin: 30px 0;
+}
+
+.deck-selection h3 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.3em;
+}
+
+.deck-options {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.deck-option {
+    cursor: pointer;
+}
+
+.deck-option input[type="radio"] {
+    display: none;
+}
+
+.deck-card {
+    background: #f8f9fa;
+    border: 3px solid #ddd;
+    border-radius: 15px;
+    padding: 20px;
+    width: 200px;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.deck-option input[type="radio"]:checked + .deck-card {
+    border-color: #667eea;
+    background: #f0f3ff;
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+    transform: scale(1.05);
+}
+
+.deck-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 3px 15px rgba(0,0,0,0.2);
+}
+
+.deck-title {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.deck-info {
+    font-size: 1.1em;
+    color: #667eea;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.deck-desc {
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.6;
+}
+
+.deck-card.recommended {
+    border-color: #f39c12;
+}
+
+.deck-option input[type="radio"]:checked + .deck-card.recommended {
+    border-color: #f39c12;
+    background: #fff9f0;
+}
+
+.recommended-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #f39c12;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.4);
+}
+
+/* 房间设置显示 */
+.room-settings {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.room-settings span {
+    color: #666;
+}
+
+.room-settings strong {
+    color: #667eea;
+}
+
+/* ==================== 响应式优化 ==================== */
+
+@media (max-width: 768px) {
+    .deck-options {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .deck-card {
+        width: 250px;
+    }
+    
+    .room-settings {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
