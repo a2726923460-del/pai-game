@@ -1,3 +1,5 @@
+/* ==================== 基础样式 ==================== */
+
 * {
     margin: 0;
     padding: 0;
@@ -23,6 +25,8 @@ body {
     display: none !important;
 }
 
+/* ==================== 容器样式 ==================== */
+
 .container {
     background: white;
     border-radius: 20px;
@@ -41,6 +45,13 @@ h2 {
     color: #333;
     margin-bottom: 20px;
 }
+
+h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* ==================== 表单元素 ==================== */
 
 input {
     width: 100%;
@@ -87,7 +98,8 @@ button:disabled {
     color: #999;
 }
 
-/* 玩家列表 */
+/* ==================== 玩家列表 ==================== */
+
 #player-list {
     display: flex;
     flex-wrap: wrap;
@@ -103,20 +115,24 @@ button:disabled {
     font-weight: bold;
 }
 
-/* 游戏界面 */
+/* ==================== 游戏信息栏 ==================== */
+
 .game-info {
     background: white;
     border-radius: 15px;
     padding: 15px;
     margin-bottom: 20px;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
 .info-item {
     display: flex;
     gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .info-item span {
@@ -127,11 +143,34 @@ button:disabled {
     color: #667eea;
 }
 
-/* 其他玩家 */
+/* 出牌顺序显示 */
+#play-order-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    width: 100%;
+    padding: 10px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+}
+
+#play-order-text {
+    margin-top: 5px;
+    font-family: monospace;
+    font-weight: bold;
+    color: #667eea;
+}
+
+/* ==================== 其他玩家区域 ==================== */
+
 .other-players {
     display: flex;
     justify-content: space-around;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .player-slot {
@@ -140,6 +179,13 @@ button:disabled {
     padding: 15px;
     min-width: 150px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s;
+    position: relative;
+}
+
+.player-slot.active {
+    border: 3px solid #f39c12 !important;
+    box-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
 }
 
 .player-name {
@@ -153,7 +199,20 @@ button:disabled {
     font-size: 14px;
 }
 
-/* ==================== 卡牌样式优化 ==================== */
+.played-card {
+    background: #2ecc71;
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* ==================== 卡牌样式（核心）==================== */
 
 .card {
     width: 80px;
@@ -171,7 +230,6 @@ button:disabled {
     transition: all 0.3s;
     position: relative;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    color: #000; /* 默认黑色 */
 }
 
 .card:hover {
@@ -179,88 +237,122 @@ button:disabled {
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
 }
 
-/* 点数卡牌的颜色（只对数字生效）*/
-.card.red { 
+/* ==================== 功能牌：全黑 ==================== */
+
+.card.card-function-black {
+    border-color: #000 !important;
+}
+
+.card.card-function-black * {
+    color: #000 !important;
+}
+
+.card.card-function-black div {
+    color: #000 !important;
+}
+
+/* ==================== 纯数字牌：彩色 ==================== */
+
+/* 红色牌 */
+.card.red {
     border-color: #e74c3c;
 }
 
-.card.red > div:first-child {
-    color: #e74c3c; /* 只给第一个数字上色 */
+.card.red div {
+    color: #e74c3c;
 }
 
-.card.yellow { 
+/* 黄色牌 */
+.card.yellow {
     border-color: #f39c12;
 }
 
-.card.yellow > div:first-child {
+.card.yellow div {
     color: #f39c12;
 }
 
-.card.blue { 
+/* 蓝色牌 */
+.card.blue {
     border-color: #3498db;
 }
 
-.card.blue > div:first-child {
+.card.blue div {
     color: #3498db;
 }
 
-.card.green { 
+/* 绿色牌 */
+.card.green {
     border-color: #2ecc71;
 }
 
-.card.green > div:first-child {
+.card.green div {
     color: #2ecc71;
 }
 
-/* 功能符号统一为黑色 */
-.card .function-symbol {
-    color: #000 !important;
-    font-weight: bold;
-    font-size: 18px;
+/* ==================== 卡牌动画 ==================== */
+
+@keyframes cardFlip {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(90deg); }
+    100% { transform: rotateY(0deg); }
 }
 
-/* 摸牌符号（+1）特殊样式 */
-.card .draw-symbol {
-    color: #000 !important;
-    font-weight: bold;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    gap: 2px;
+.card.flipping {
+    animation: cardFlip 0.6s;
 }
 
-/* 转换符号样式 */
-.card .transform-symbol {
-    color: #000 !important;
-    font-weight: bold;
-    font-size: 18px;
-    font-family: 'Courier New', monospace;
-}
-
-/* Skip 符号样式 */
-.card .skip-symbol {
-    color: #000 !important;
-    font-weight: bold;
-    font-size: 16px;
-    text-transform: uppercase;
-}
-
-/* 翻转符号样式 */
-.card .flip-symbol {
-    color: #000 !important;
-    font-weight: bold;
-    font-size: 28px;
-}
-
-/* 卡牌背面 */
 .card-back {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
 }
 
+/* ==================== 公共区域 ==================== */
 
+.play-area {
+    background: rgba(255,255,255,0.9);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
+    min-height: 200px;
+}
 
-/* 手牌区 */
+#played-cards {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+/* ==================== 游戏日志 ==================== */
+
+#game-log {
+    max-height: 150px;
+    overflow-y: auto;
+    text-align: left;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 10px;
+}
+
+.log-entry {
+    padding: 8px;
+    margin: 3px 0;
+    border-left: 3px solid #ddd;
+    background: #fafafa;
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #666;
+}
+
+.log-entry:last-child {
+    border-left-color: #667eea;
+    background: #f0f3ff;
+}
+
+/* ==================== 手牌区域 ==================== */
+
 .my-area {
     background: white;
     border-radius: 15px;
@@ -277,114 +369,33 @@ button:disabled {
     padding: 20px 0;
 }
 
-/* 卡牌选择 */
+/* ==================== 卡牌选择界面 ==================== */
+
+#selected-card {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+}
+
 .card-selection {
     display: flex;
     gap: 30px;
     justify-content: center;
     padding: 20px;
+    flex-wrap: wrap;
 }
 
 .card-option {
     text-align: center;
 }
 
-/* 公共区域 */
-.play-area {
-    background: rgba(255,255,255,0.9);
-    border-radius: 15px;
-    padding: 20px;
-    margin: 20px 0;
-    min-height: 200px;
+.card-option button {
+    margin-top: 15px;
 }
 
-#played-cards {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-bottom: 20px;
-}
+/* ==================== 胜利动画 ==================== */
 
-#game-log {
-    max-height: 150px;
-    overflow-y: auto;
-    text-align: left;
-    padding: 10px;
-    background: #f9f9f9;
-    border-radius: 10px;
-}
-
-.log-entry {
-    padding: 5px 0;
-    border-bottom: 1px solid #eee;
-    color: #666;
-}
-
-/* 响应式 */
-@media (max-width: 768px) {
-    .other-players {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .card {
-        width: 60px;
-        height: 90px;
-        font-size: 18px;
-    }
-}
-/* ==================== 游戏结算优化 ==================== */
-
-.player-slot {
-    transition: all 0.3s;
-}
-
-.player-slot.active {
-    border: 3px solid #f39c12 !important;
-    box-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
-}
-
-.played-card {
-    background: #2ecc71;
-    color: white;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 10px;
-    font-weight: bold;
-}
-
-/* 卡牌翻转动画 */
-@keyframes cardFlip {
-    0% { transform: rotateY(0deg); }
-    50% { transform: rotateY(90deg); }
-    100% { transform: rotateY(0deg); }
-}
-
-.card.flipping {
-    animation: cardFlip 0.6s;
-}
-
-/* 日志条目样式 */
-.log-entry {
-    padding: 8px;
-    margin: 3px 0;
-    border-left: 3px solid #ddd;
-    background: #fafafa;
-    border-radius: 3px;
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-.log-entry:last-child {
-    border-left-color: #667eea;
-    background: #f0f3ff;
-}
-
-/* 胜利动画 */
 @keyframes victory {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
@@ -394,10 +405,47 @@ button:disabled {
     animation: victory 1s infinite;
 }
 
-/* 响应式优化 */
+/* ==================== 加载动画 ==================== */
+
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ==================== 按钮样式变体 ==================== */
+
+button.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+button.success {
+    background: #2ecc71;
+}
+
+button.danger {
+    background: #e74c3c;
+}
+
+button.warning {
+    background: #f39c12;
+}
+
+/* ==================== 响应式设计 ==================== */
+
 @media (max-width: 768px) {
     .other-players {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: center;
     }
     
     .player-slot {
@@ -416,160 +464,35 @@ button:disabled {
         flex-wrap: nowrap;
         padding: 10px;
     }
+    
+    .card-selection {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .info-item {
+        flex-direction: column;
+        gap: 10px;
+    }
 }
 
-/* 加载动画 */
-.loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* 提示信息 */
-.tooltip {
-    position: relative;
-    display: inline-block;
-}
-
-.tooltip .tooltiptext {
-    visibility: hidden;
-    width: 200px;
-    background-color: #555;
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 10px;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%;
-    left: 50%;
-    margin-left: -100px;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.tooltip:hover .tooltiptext {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* 按钮状态 */
-button.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-button.success {
-    background: #2ecc71;
-}
-
-button.danger {
-    background: #e74c3c;
-}
-
-button.warning {
-    background: #f39c12;
-}
-
-/* 出牌顺序显示 */
-#play-order-display {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-
-#play-order-text {
-    margin-top: 5px;
-    font-family: monospace;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-}
-
-/* 玩家卡槽位置标识 */
-.player-slot {
-    position: relative;
-    transition: all 0.3s;
-}
-
-.player-slot::before {
-    content: attr(data-order);
-    position: absolute;
-    top: -10px;
-    left: -10px;
-    width: 24px;
-    height: 24px;
-    background: #667eea;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 12px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-
-
-/* 功能牌全黑样式 */
-.card.card-function-black {
-    border-color: #000 !important;
-    border-width: 3px;
-    background: #fff;
-}
-
-.card.card-function-black * {
-    color: #000 !important;
-}
-
-/* 功能符号样式 */
-.function-symbol {
-    color: #000 !important;
-    font-weight: bold;
-    font-size: 18px;
-}
-
-/* 保留纯数字牌的彩色边框 */
-.card.red {
-    border-color: #e74c3c;
-}
-
-.card.yellow {
-    border-color: #f39c12;
-}
-
-.card.blue {
-    border-color: #3498db;
-}
-
-.card.green {
-    border-color: #2ecc71;
-}
-
-/* 纯数字牌的数字颜色 */
-.card.red > div:first-child {
-    color: #e74c3c;
-}
-
-.card.yellow > div:first-child {
-    color: #f39c12;
-}
-
-.card.blue > div:first-child {
-    color: #3498db;
-}
-
-.card.green > div:first-child {
-    color: #2ecc71;
+@media (max-width: 480px) {
+    .container {
+        padding: 20px;
+    }
+    
+    h1 {
+        font-size: 1.8em;
+    }
+    
+    .card {
+        width: 60px;
+        height: 90px;
+        font-size: 14px;
+    }
+    
+    button {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
 }
