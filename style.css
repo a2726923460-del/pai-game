@@ -520,13 +520,27 @@ button.warning {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* 功能牌黑色边框 */
-.card.card-function-border {
+
+
+/* 功能牌全黑样式 */
+.card.card-function-black {
     border-color: #000 !important;
     border-width: 3px;
+    background: #fff;
 }
 
-/* 保留原有的颜色边框 */
+.card.card-function-black * {
+    color: #000 !important;
+}
+
+/* 功能符号样式 */
+.function-symbol {
+    color: #000 !important;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* 保留纯数字牌的彩色边框 */
 .card.red {
     border-color: #e74c3c;
 }
@@ -541,4 +555,21 @@ button.warning {
 
 .card.green {
     border-color: #2ecc71;
+}
+
+/* 纯数字牌的数字颜色 */
+.card.red > div:first-child {
+    color: #e74c3c;
+}
+
+.card.yellow > div:first-child {
+    color: #f39c12;
+}
+
+.card.blue > div:first-child {
+    color: #3498db;
+}
+
+.card.green > div:first-child {
+    color: #2ecc71;
 }

@@ -552,38 +552,35 @@ function renderHand() {
     console.log('✅ 手牌渲染完成，共', hand.length, '张');
 }
 
-// 创建卡牌元素（边框颜色由展示面决定）
+// 创建卡牌元素（功能牌全黑）
 function createCardElement(card, showBoth = false) {
     const div = document.createElement('div');
     
-    // 如果是双面显示（手牌），默认使用卡牌颜色
-    if (showBoth) {
+    // 判断是否为功能牌
+    const isFunctionCard = isFunction(card.top) || isFunction(card.bottom);
+    
+    if (isFunctionCard) {
+        // 功能牌：全黑
+        div.className = 'card card-function-black';
+    } else {
+        // 纯数字牌：彩色
         div.className = 'card ' + card.color;
-        
+    }
+    
+    if (showBoth) {
+        // 双面显示（手牌）
         const topValue = card.top;
         const bottomValue = card.bottom;
         
         div.innerHTML = `
-            ${formatCardValue(topValue, card.color)}
+            ${formatCardValue(topValue, isFunctionCard ? 'black' : card.color)}
             <div style="font-size: 12px; color: #999; margin: 3px 0;">━━━</div>
-            ${formatCardValue(bottomValue, card.color)}
+            ${formatCardValue(bottomValue, isFunctionCard ? 'black' : card.color)}
         `;
     } else {
         // 单面显示（已出的牌）
         const shownValue = card.shown || card.top;
-        
-        // ✅ 关键：根据展示面决定边框颜色
-        const isFunctionShown = isFunction(shownValue);
-        
-        if (isFunctionShown) {
-            // 展示功能 → 黑色边框
-            div.className = 'card card-function-border';
-        } else {
-            // 展示数字 → 彩色边框
-            div.className = 'card ' + card.color;
-        }
-        
-        div.innerHTML = formatCardValue(shownValue, card.color);
+        div.innerHTML = formatCardValue(shownValue, isFunctionCard ? 'black' : card.color);
     }
     
     return div;
@@ -595,28 +592,37 @@ function isFunction(value) {
     return functions.includes(value);
 }
 
-// 格式化单个卡牌值（带CSS类）
-function formatCardValue(value, color) {
+// 格式化单个卡牌值（功能牌全黑）
+function formatCardValue(value, colorOrBlack) {
     if (typeof value === 'number') {
-        // 数字使用对应颜色
-        const colorMap = {
-            'red': '#e74c3c',
-            'yellow': '#f39c12',
-            'blue': '#3498db',
-            'green': '#2ecc71'
-        };
-        const textColor = colorMap[color] || '#333';
+        // 数字
+        let textColor;
+        
+        if (colorOrBlack === 'black') {
+            // 功能牌中的数字 → 黑色
+            textColor = '#000';
+        } else {
+            // 纯数字牌 → 对应颜色
+            const colorMap = {
+                'red': '#e74c3c',
+                'yellow': '#f39c12',
+                'blue': '#3498db',
+                'green': '#2ecc71'
+            };
+            textColor = colorMap[colorOrBlack] || '#000';
+        }
+        
         return `<div style="font-size: 22px; font-weight: bold; color: ${textColor};">${value}</div>`;
     }
     
-    // 功能符号使用黑色
+    // 功能符号 → 统一黑色
     const symbolMap = {
-        'x+1': `<div class="transform-symbol">x+1</div>`,
-        'x+2': `<div class="transform-symbol">x+2</div>`,
-        'x*2': `<div class="transform-symbol">x×2</div>`,
-        'Skip': `<div class="skip-symbol">Skip</div>`,
-        '+1': `<div class="draw-symbol">🎴+1</div>`,
-        '⇌': `<div class="flip-symbol">⇌</div>`
+        'x+1': `<div class="function-symbol">x+1</div>`,
+        'x+2': `<div class="function-symbol">x+2</div>`,
+        'x*2': `<div class="function-symbol">x×2</div>`,
+        'Skip': `<div class="function-symbol">Skip</div>`,
+        '+1': `<div class="function-symbol">🎴+1</div>`,
+        '⇌': `<div class="function-symbol">⇌</div>`
     };
     
     return symbolMap[value] || `<div style="color: #000; font-weight: bold;">${value}</div>`;
@@ -638,7 +644,7 @@ function formatValue(value) {
     return map[value] || value;
 }
 
-// 选择卡牌
+// 选择卡牌（功能牌全黑预览）
 function selectCard(index) {
     if (gameState.currentPlayer !== myPlayerIndex) {
         alert('还没轮到你！');
@@ -659,13 +665,13 @@ function selectCard(index) {
     const bottomIsForced = ['+1', '⇌'].includes(card.bottom);
 
     if (topIsForced) {
-        console.log('⚠️ top 面是功能牌，只能展示这一面');
+        console.log('⚠️ top 面是 +1 或翻转，只能展示这一面');
         playCard(index, 'top');
         return;
     }
     
     if (bottomIsForced) {
-        console.log('⚠️ bottom 面是功能牌，只能展示这一面');
+        console.log('⚠️ bottom 面是 +1 或翻转，只能展示这一面');
         playCard(index, 'bottom');
         return;
     }
@@ -676,23 +682,19 @@ function selectCard(index) {
     const topSide = document.getElementById('top-side');
     const bottomSide = document.getElementById('bottom-side');
     
-    // ✅ 根据面的类型设置边框
-    const topIsFunction = isFunction(card.top);
-    const bottomIsFunction = isFunction(card.bottom);
+    // 判断是否为功能牌
+    const isFunctionCard = isFunction(card.top) || isFunction(card.bottom);
     
-    if (topIsFunction) {
-        topSide.className = 'card card-function-border';
+    if (isFunctionCard) {
+        topSide.className = 'card card-function-black';
+        bottomSide.className = 'card card-function-black';
     } else {
         topSide.className = 'card ' + card.color;
-    }
-    topSide.innerHTML = formatCardValue(card.top, card.color);
-    
-    if (bottomIsFunction) {
-        bottomSide.className = 'card card-function-border';
-    } else {
         bottomSide.className = 'card ' + card.color;
     }
-    bottomSide.innerHTML = formatCardValue(card.bottom, card.color);
+    
+    topSide.innerHTML = formatCardValue(card.top, isFunctionCard ? 'black' : card.color);
+    bottomSide.innerHTML = formatCardValue(card.bottom, isFunctionCard ? 'black' : card.color);
     
     window.selectedCardIndex = index;
 }
@@ -1253,7 +1255,7 @@ function showGameResult(winner) {
 
 // ==================== UI更新 ====================
 
-// 渲染已出的牌
+// 渲染已出的牌（功能牌全黑）
 function renderPlayedCards() {
     const container = document.getElementById('played-cards');
     if (!container) {
@@ -1280,11 +1282,11 @@ function renderPlayedCards() {
         try {
             const cardDiv = document.createElement('div');
             
-            // ✅ 根据展示面决定边框
-            const isFunctionShown = isFunction(card.shown);
+            // 判断是否为功能牌
+            const isFunctionCard = isFunction(card.shown) || isFunction(card.hidden);
             
-            if (isFunctionShown) {
-                cardDiv.className = 'card card-function-border';
+            if (isFunctionCard) {
+                cardDiv.className = 'card card-function-black';
             } else {
                 cardDiv.className = 'card ' + (card.color || 'red');
             }
@@ -1299,18 +1301,18 @@ function renderPlayedCards() {
             if (gameState.phase === 'playing' || gameState.phase === 'revealing') {
                 // 只显示展示面
                 cardDiv.innerHTML = `
-                    ${formatCardValue(card.shown, card.color)}
+                    ${formatCardValue(card.shown, isFunctionCard ? 'black' : card.color)}
                     <div style="font-size: 10px; color: #666; margin-top: 8px;">${playerName}</div>
                 `;
             } else {
                 // 结算阶段，显示双面
                 cardDiv.innerHTML = `
                     <div style="font-size: 14px; margin-bottom: 3px;">
-                        ${formatCardValue(card.shown, card.color)}
+                        ${formatCardValue(card.shown, isFunctionCard ? 'black' : card.color)}
                     </div>
                     <div style="font-size: 10px; color: #999;">━━━</div>
                     <div style="font-size: 14px; margin-top: 3px; padding: 3px; background: #fff3cd; border-radius: 3px;">
-                        ${formatCardValue(card.hidden, card.color)}
+                        ${formatCardValue(card.hidden, isFunctionCard ? 'black' : card.color)}
                     </div>
                     <div style="font-size: 10px; color: #666; margin-top: 5px;">${playerName}</div>
                 `;
