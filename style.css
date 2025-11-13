@@ -519,3 +519,26 @@ button.warning {
     font-size: 12px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
+
+/* 功能牌黑色边框 */
+.card.card-function-border {
+    border-color: #000 !important;
+    border-width: 3px;
+}
+
+/* 保留原有的颜色边框 */
+.card.red {
+    border-color: #e74c3c;
+}
+
+.card.yellow {
+    border-color: #f39c12;
+}
+
+.card.blue {
+    border-color: #3498db;
+}
+
+.card.green {
+    border-color: #2ecc71;
+}

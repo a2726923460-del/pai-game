@@ -552,13 +552,14 @@ function renderHand() {
     console.log('✅ 手牌渲染完成，共', hand.length, '张');
 }
 
-// 创建卡牌元素（带样式类）
+// 创建卡牌元素（边框颜色由展示面决定）
 function createCardElement(card, showBoth = false) {
     const div = document.createElement('div');
-    div.className = 'card ' + card.color;
     
+    // 如果是双面显示（手牌），默认使用卡牌颜色
     if (showBoth) {
-        // 显示双面（手牌）
+        div.className = 'card ' + card.color;
+        
         const topValue = card.top;
         const bottomValue = card.bottom;
         
@@ -568,12 +569,30 @@ function createCardElement(card, showBoth = false) {
             ${formatCardValue(bottomValue, card.color)}
         `;
     } else {
-        // 只显示一面
-        const value = card.top || card.shown;
-        div.innerHTML = formatCardValue(value, card.color);
+        // 单面显示（已出的牌）
+        const shownValue = card.shown || card.top;
+        
+        // ✅ 关键：根据展示面决定边框颜色
+        const isFunctionShown = isFunction(shownValue);
+        
+        if (isFunctionShown) {
+            // 展示功能 → 黑色边框
+            div.className = 'card card-function-border';
+        } else {
+            // 展示数字 → 彩色边框
+            div.className = 'card ' + card.color;
+        }
+        
+        div.innerHTML = formatCardValue(shownValue, card.color);
     }
     
     return div;
+}
+
+// 判断是否为功能符号
+function isFunction(value) {
+    const functions = ['x+1', 'x+2', 'x*2', 'Skip', '+1', '⇌'];
+    return functions.includes(value);
 }
 
 // 格式化单个卡牌值（带CSS类）
@@ -635,34 +654,44 @@ function selectCard(index) {
     
     console.log('🎴 选择卡牌:', card);
     
-    // 检查是否只能展示某一面（+1 和 ⇌ 的功能面不能隐藏）
-    const topIsForced = ['🎴+1', '+1', '⇌'].includes(card.top);
-    const bottomIsForced = ['🎴+1', '+1', '⇌'].includes(card.bottom);
+    // 检查是否只能展示某一面
+    const topIsForced = ['+1', '⇌'].includes(card.top);
+    const bottomIsForced = ['+1', '⇌'].includes(card.bottom);
 
     if (topIsForced) {
-        // top 是 +1 或 ⇌，必须展示 top（功能面）
-        console.log('⚠️ 这张牌的 top 面是功能牌，只能展示这一面');
+        console.log('⚠️ top 面是功能牌，只能展示这一面');
         playCard(index, 'top');
         return;
     }
     
     if (bottomIsForced) {
-        // bottom 是 +1 或 ⇌，必须展示 bottom（功能面）
-        console.log('⚠️ 这张牌的 bottom 面是功能牌，只能展示这一面');
+        console.log('⚠️ bottom 面是功能牌，只能展示这一面');
         playCard(index, 'bottom');
         return;
     }
     
-    // 其他情况，可以选择
+    // 显示选择界面
     document.getElementById('selected-card').classList.remove('hidden');
     
     const topSide = document.getElementById('top-side');
     const bottomSide = document.getElementById('bottom-side');
     
-    topSide.className = 'card ' + card.color;
+    // ✅ 根据面的类型设置边框
+    const topIsFunction = isFunction(card.top);
+    const bottomIsFunction = isFunction(card.bottom);
+    
+    if (topIsFunction) {
+        topSide.className = 'card card-function-border';
+    } else {
+        topSide.className = 'card ' + card.color;
+    }
     topSide.innerHTML = formatCardValue(card.top, card.color);
     
-    bottomSide.className = 'card ' + card.color;
+    if (bottomIsFunction) {
+        bottomSide.className = 'card card-function-border';
+    } else {
+        bottomSide.className = 'card ' + card.color;
+    }
     bottomSide.innerHTML = formatCardValue(card.bottom, card.color);
     
     window.selectedCardIndex = index;
@@ -765,15 +794,15 @@ function playCard(cardIndex, side) {
     // 应用更新
     console.log('💾 准备更新数据库:', updates);
     
-    gameRef.update(updates).then(() => {
-        console.log('✅ 出牌成功');
-        
-        // 检查胜利
-        if (newHand.length === 0) {
-            console.log('🏆 我赢了！');
-            declareWinner(myPlayerIndex);
-        }
-    }).catch(err => {
+    // 应用更新
+gameRef.update(updates).then(() => {
+    console.log('✅ 出牌成功');
+    
+    // ✅ 移除立即胜利判定，等待结算后再判定
+    if (newHand.length === 0) {
+        console.log('🎴 已出完所有手牌，等待结算判定胜利');
+    }
+}).catch(err => {
         console.error('❌ 出牌失败:', err);
         alert('出牌失败：' + err.message + '\n请重试或刷新页面');
     });
@@ -924,6 +953,33 @@ function settleNextPlayer() {
         
         gameRef.update(updates).then(() => {
             window.isSettling = false;
+            // 检查胜利条件（在回合结算完成后）
+function checkWinner() {
+    if (!gameState || !gameState.hands) {
+        return;
+    }
+
+    console.log('🏆 检查胜利条件...');
+
+    // 检查所有玩家的手牌数量
+    for (let i = 0; i < 4; i++) {
+        const hand = gameState.hands[i];
+        if (hand && Array.isArray(hand) && hand.length === 0) {
+            // 找到手牌为0的玩家
+            const playerName = gameState.players[i]?.name || '玩家' + (i + 1);
+            console.log('🎉', playerName, '获胜！手牌数：', hand.length);
+            
+            // 延迟1秒后宣布胜利
+            setTimeout(() => {
+                declareWinner(i);
+            }, 1000);
+            
+            return; // 找到胜者，停止检查
+        }
+    }
+
+    console.log('✓ 暂无玩家获胜，继续游戏');
+}
             setTimeout(() => startNextRound(), 2000);
         });
     } else {
@@ -1223,7 +1279,16 @@ function renderPlayedCards() {
 
         try {
             const cardDiv = document.createElement('div');
-            cardDiv.className = 'card ' + (card.color || 'red');
+            
+            // ✅ 根据展示面决定边框
+            const isFunctionShown = isFunction(card.shown);
+            
+            if (isFunctionShown) {
+                cardDiv.className = 'card card-function-border';
+            } else {
+                cardDiv.className = 'card ' + (card.color || 'red');
+            }
+            
             cardDiv.style.margin = '0 5px';
             
             const playerName = gameState.players && gameState.players[playerIndex] 
