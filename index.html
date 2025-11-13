@@ -33,18 +33,23 @@
 
     <!-- 游戏界面 -->
     <div id="game-screen" class="screen hidden">
-        <!-- 游戏信息栏 -->
-        <div class="game-info">
-            <div class="info-item">
-                <span>回合: <strong id="round-num">1</strong></span>
-                <span>参考点: <strong id="reference-point">1</strong></span>
-                <span>方向: <strong id="direction">⟲</strong></span>
-            </div>
-            <div class="info-item">
-                <span>当前玩家: <strong id="current-player"></strong></span>
-                <span>阶段: <strong id="game-phase">出牌中</strong></span>
-            </div>
-        </div>
+       <!-- 游戏信息栏 -->
+<div class="game-info">
+    <div class="info-item">
+        <span>回合: <strong id="round-num">1</strong></span>
+        <span>参考点: <strong id="reference-point">1</strong></span>
+        <span>方向: <strong id="direction">⟲</strong></span>
+    </div>
+    <div class="info-item">
+        <span>当前玩家: <strong id="current-player"></strong></span>
+        <span>阶段: <strong id="game-phase">出牌中</strong></span>
+    </div>
+    <!-- 新增：出牌顺序显示 -->
+    <div class="info-item" id="play-order-display" style="width: 100%; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 8px; display: none;">
+        <span style="font-weight: bold;">📋 出牌顺序：</span>
+        <span id="play-order-text"></span>
+    </div>
+</div>
 
         <!-- 其他玩家信息 -->
         <div class="other-players">

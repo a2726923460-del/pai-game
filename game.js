@@ -287,10 +287,15 @@ function createDeck() {
         deck.push({ top: num, bottom: 'Skip', color: colors[i], type: 'function' });
     });
 
-    // +1 (1-8, 8张)
+    // +1 (1-8, 8张) - 注意：存储为 '+1' 而不是 '🎴+1'
     [1,2,3,4,5,6,7,8].forEach((num, i) => {
-        deck.push({ top: num, bottom: '+1', color: colors[i % 4], type: 'function' });
+        deck.push({ 
+        top: num, 
+        bottom: '+1',  // ← 存储为 '+1'
+        color: colors[i % 4], 
+        type: 'function' 
     });
+});
 
     // 翻转 (1-8, 8张)
     [1,2,3,4,5,6,7,8].forEach((num, i) => {
@@ -357,12 +362,15 @@ function updateGameScreen() {
         return;
     }
 
-    console.log('🔄 更新游戏界面，我的位置:', myPlayerIndex, '游戏状态:', gameState);
+    console.log('🔄 更新游戏界面');
 
     // 更新信息栏
     document.getElementById('round-num').textContent = gameState.round;
     document.getElementById('reference-point').textContent = gameState.referencePoint;
-    document.getElementById('direction').textContent = gameState.direction === 'ccw' ? '⟲ 逆时针' : '⟳ 顺时针';
+    
+    // 更新方向显示
+    const directionText = gameState.direction === 'ccw' ? '⟲ 逆时针' : '⟳ 顺时针';
+    document.getElementById('direction').textContent = directionText;
     
     const currentPlayerName = gameState.players[gameState.currentPlayer]?.name || '未知';
     document.getElementById('current-player').textContent = currentPlayerName;
@@ -371,9 +379,13 @@ function updateGameScreen() {
         'playing': '出牌阶段',
         'revealing': '翻牌阶段',
         'settling': '结算阶段',
+        'round-end': '回合结束',
         'finished': '游戏结束'
     };
     document.getElementById('game-phase').textContent = phaseText[gameState.phase] || gameState.phase;
+
+    // 显示出牌顺序
+    updatePlayOrder();
 
     // 更新其他玩家信息
     updateOtherPlayers();
@@ -388,16 +400,26 @@ function updateGameScreen() {
     renderLog();
 }
 
-// 更新其他玩家信息
+// 更新其他玩家信息（按出牌顺序排列）
 function updateOtherPlayers() {
     if (!gameState || !gameState.players || !gameState.hands) {
         console.warn('⚠️ 游戏状态不完整，跳过更新其他玩家');
         return;
     }
 
-    const otherIndexes = [0, 1, 2, 3].filter(i => i !== myPlayerIndex);
+    // 获取出牌顺序（去除自己）
+    const order = [];
+    let current = gameState.startPlayer;
+    for (let i = 0; i < 4; i++) {
+        if (current !== myPlayerIndex) {
+            order.push(current);
+        }
+        current = getNextPlayer(current, gameState.direction);
+    }
     
-    otherIndexes.forEach((playerIndex, slotIndex) => {
+    console.log('👥 其他玩家顺序:', order);
+
+    order.forEach((playerIndex, slotIndex) => {
         const slot = document.getElementById('player-' + slotIndex);
         if (!slot) return;
 
@@ -409,7 +431,15 @@ function updateOtherPlayers() {
         const nameElem = slot.querySelector('.player-name');
         const countElem = slot.querySelector('.hand-count');
         
-        if (nameElem) nameElem.textContent = player?.name || '玩家' + (playerIndex + 1);
+        // 显示玩家名称和位置标识
+        let positionIcon = '';
+        if (playerIndex === gameState.currentPlayer && gameState.phase === 'playing') {
+            positionIcon = ' 👉';
+        } else if (playerIndex === gameState.startPlayer) {
+            positionIcon = ' 🎯';
+        }
+        
+        if (nameElem) nameElem.textContent = (player?.name || '玩家' + (playerIndex + 1)) + positionIcon;
         if (countElem) countElem.textContent = `手牌: ${handCount}`;
         
         // 显示是否已出牌
@@ -423,6 +453,7 @@ function updateOtherPlayers() {
             if (hasPlayed) {
                 playedCard.classList.remove('hidden');
                 playedCard.textContent = '✓';
+                playedCard.style.background = '#2ecc71';
             } else {
                 playedCard.classList.add('hidden');
             }
@@ -572,19 +603,17 @@ function formatCardValue(value, color) {
     return symbolMap[value] || `<div style="color: #000; font-weight: bold;">${value}</div>`;
 }
 
-// 格式化卡牌值（区分摸牌+1和转换x+1）
+// formatValue 函数
 function formatValue(value) {
-    if (typeof value === 'number') {
-        return value;
-    }
+    if (typeof value === 'number') return value;
     
     const map = {
-        'x+1': 'x+1',      // 转换符号
-        'x+2': 'x+2',      // 转换符号
-        'x*2': 'x×2',      // 转换符号（使用×号）
-        'Skip': 'Skip',    // 跳过符号
-        '+1': '🎴+1',      // 摸牌符号（带扑克牌图案）
-        '⇌': '⇌'          // 翻转符号
+        'x+1': 'x+1',
+        'x+2': 'x+2',
+        'x*2': 'x×2',
+        'Skip': 'Skip',
+        '+1': '🎴+1',  // ← 显示时添加图标
+        '⇌': '⇌'
     };
     
     return map[value] || value;
@@ -604,28 +633,37 @@ function selectCard(index) {
 
     const card = gameState.hands[myPlayerIndex][index];
     
-    // 检查是否只能展示某一面
-    const mustShowTop = ['⇌', '+1'].includes(card.bottom);
-    const mustShowBottom = ['⇌', '+1'].includes(card.top);
+    console.log('🎴 选择卡牌:', card);
+    
+    // 检查是否只能展示某一面（+1 和 ⇌ 的功能面不能隐藏）
+    const topIsForced = ['🎴+1', '+1', '⇌'].includes(card.top);
+    const bottomIsForced = ['🎴+1', '+1', '⇌'].includes(card.bottom);
 
-    if (mustShowTop || mustShowBottom) {
-        // 自动选择
-        const side = mustShowTop ? 'top' : 'bottom';
-        playCard(index, side);
+    if (topIsForced) {
+        // top 是 +1 或 ⇌，必须展示 top（功能面）
+        console.log('⚠️ 这张牌的 top 面是功能牌，只能展示这一面');
+        playCard(index, 'top');
         return;
     }
     
-    // 显示选择界面
+    if (bottomIsForced) {
+        // bottom 是 +1 或 ⇌，必须展示 bottom（功能面）
+        console.log('⚠️ 这张牌的 bottom 面是功能牌，只能展示这一面');
+        playCard(index, 'bottom');
+        return;
+    }
+    
+    // 其他情况，可以选择
     document.getElementById('selected-card').classList.remove('hidden');
     
     const topSide = document.getElementById('top-side');
     const bottomSide = document.getElementById('bottom-side');
     
     topSide.className = 'card ' + card.color;
-    topSide.innerHTML = `<div style="font-size: 24px;">${formatValue(card.top)}</div>`;
+    topSide.innerHTML = formatCardValue(card.top, card.color);
     
     bottomSide.className = 'card ' + card.color;
-    bottomSide.innerHTML = `<div style="font-size: 24px;">${formatValue(card.bottom)}</div>`;
+    bottomSide.innerHTML = formatCardValue(card.bottom, card.color);
     
     window.selectedCardIndex = index;
 }
@@ -912,7 +950,7 @@ function calculateSettle(card, referencePoint) {
         return {
             skipDraw: true,
             reason: 'Skip保护：不摸牌，参考点不变',
-            newReference: referencePoint // 保持不变
+            newReference: referencePoint
         };
     }
 
@@ -941,10 +979,12 @@ function calculateSettle(card, referencePoint) {
 
     // 情况3：隐藏为点数
     if (typeof hidden !== 'number') {
-        console.error('❌ 隐藏面不是点数也不是功能:', hidden);
+        // 如果隐藏面是 +1 或 ⇌，这是错误的（这些应该被展示）
+        console.error('❌ 错误：功能牌', hidden, '被隐藏了！这违反规则');
+        // 容错处理：当作点数1处理
         return {
             skipDraw: false,
-            needDraw: false,
+            needDraw: true,
             settlePoint: 1
         };
     }
@@ -981,8 +1021,8 @@ function applyShownEffect(card, playerIndex, state) {
 
     console.log('✨ 检查展示面效果:', shown);
 
-    // +1效果
-    if (shown === '+1') {
+    // +1效果（检查原始值，不是格式化后的）
+    if (shown === '+1') {  // ← 注意：这里是 '+1' 而不是 '🎴+1'
         log.push('  💥 +1效果触发！');
         
         const order = getSettlementOrder(state.startPlayer, state.direction);
@@ -992,6 +1032,7 @@ function applyShownEffect(card, playerIndex, state) {
 
         console.log('  前家:', prevPlayer, '后家:', nextPlayer);
 
+        // ... 其余代码保持不变
         // 前家摸1张
         if (state.deck && state.deck.length > 0) {
             const card1 = state.deck[state.deck.length - 1];
@@ -1031,7 +1072,6 @@ function applyShownEffect(card, playerIndex, state) {
 
     return { updates, log };
 }
-
 // 获取结算顺序（按出牌顺序）
 function getSettlementOrder(startPlayer, direction) {
     if (startPlayer === undefined || startPlayer === null) {
@@ -1269,3 +1309,45 @@ setInterval(() => {
         });
     }
 }, 30000); // 每30秒检查一次
+
+// 更新出牌顺序显示
+function updatePlayOrder() {
+    const orderDisplay = document.getElementById('play-order-display');
+    const orderText = document.getElementById('play-order-text');
+    
+    if (!orderDisplay || !orderText) return;
+    
+    if (!gameState || !gameState.players) {
+        orderDisplay.style.display = 'none';
+        return;
+    }
+
+    // 计算出牌顺序
+    const order = [];
+    let current = gameState.startPlayer;
+    
+    for (let i = 0; i < 4; i++) {
+        const playerName = gameState.players[current]?.name || '玩家' + (current + 1);
+        const isCurrentPlayer = current === gameState.currentPlayer;
+        const hasPlayed = gameState.played && gameState.played[current];
+        
+        let statusIcon = '';
+        if (gameState.phase === 'playing' || gameState.phase === 'revealing') {
+            if (hasPlayed) {
+                statusIcon = ' ✅'; // 已出牌
+            } else if (isCurrentPlayer) {
+                statusIcon = ' 👉'; // 当前玩家
+            } else {
+                statusIcon = ' ⏳'; // 等待中
+            }
+        }
+        
+        order.push(`${playerName}${statusIcon}`);
+        current = getNextPlayer(current, gameState.direction);
+    }
+
+    // 添加方向指示
+    const arrow = gameState.direction === 'ccw' ? ' → ' : ' ← ';
+    orderText.innerHTML = order.join(arrow);
+    orderDisplay.style.display = 'flex';
+}

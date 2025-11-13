@@ -478,3 +478,44 @@ button.danger {
 button.warning {
     background: #f39c12;
 }
+
+/* 出牌顺序显示 */
+#play-order-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+#play-order-text {
+    margin-top: 5px;
+    font-family: monospace;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+/* 玩家卡槽位置标识 */
+.player-slot {
+    position: relative;
+    transition: all 0.3s;
+}
+
+.player-slot::before {
+    content: attr(data-order);
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 24px;
+    height: 24px;
+    background: #667eea;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
