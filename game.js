@@ -633,7 +633,10 @@ function playCard(cardIndex, side) {
     updates['log'] = newLog;
     
     // 检查是否所有人都出完牌
-    const playedCount = gameState.played.filter(p => p !== null).length;
+    // 检查是否所有人都出完牌
+    const playedCount = (gameState.played && Array.isArray(gameState.played))
+    ? gameState.played.filter(p => p !== null).length 
+    : 0;
     
     if (playedCount === 3) {
         // 最后一个人出牌，进入翻牌阶段
@@ -980,13 +983,36 @@ function showGameResult(winner) {
 // 渲染已出的牌
 function renderPlayedCards() {
     const container = document.getElementById('played-cards');
-    if (!container) return;
+    if (!container) {
+        console.warn('⚠️ 找不到已出牌容器');
+        return;
+    }
     
     container.innerHTML = '';
 
-    // 安全检查
-    if (!gameState || !gameState.played || !gameState.startPlayer === undefined) {
-        console.warn('⚠️ 游戏状态不完整，跳过渲染已出的牌');
+    // 严格的安全检查
+    if (!gameState) {
+        console.warn('⚠️ gameState 为空');
+        return;
+    }
+
+    if (!gameState.played) {
+        console.warn('⚠️ gameState.played 为空');
+        return;
+    }
+
+    if (!Array.isArray(gameState.played)) {
+        console.error('❌ gameState.played 不是数组:', typeof gameState.played, gameState.played);
+        return;
+    }
+
+    if (gameState.startPlayer === undefined || gameState.startPlayer === null) {
+        console.warn('⚠️ startPlayer 未定义');
+        return;
+    }
+
+    if (!gameState.direction) {
+        console.warn('⚠️ direction 未定义');
         return;
     }
 
@@ -994,21 +1020,24 @@ function renderPlayedCards() {
 
     order.forEach(playerIndex => {
         const card = gameState.played[playerIndex];
-        if (card) {
+        if (!card) return;
+
+        try {
             const cardDiv = document.createElement('div');
-            cardDiv.className = 'card ' + card.color;
+            cardDiv.className = 'card ' + (card.color || 'red');
             cardDiv.style.margin = '0 5px';
             
-            const playerName = gameState.players[playerIndex]?.name || '玩家' + (playerIndex + 1);
+            const playerName = gameState.players && gameState.players[playerIndex] 
+                ? gameState.players[playerIndex].name 
+                : '玩家' + (playerIndex + 1);
             
-            // 如果还在出牌阶段或翻牌阶段，只显示展示面
+            // 根据游戏阶段显示不同内容
             if (gameState.phase === 'playing' || gameState.phase === 'revealing') {
                 cardDiv.innerHTML = `
                     <div style="font-size: 24px; font-weight: bold;">${formatValue(card.shown)}</div>
                     <div style="font-size: 10px; color: #666; margin-top: 5px;">${playerName}</div>
                 `;
             } else {
-                // 结算阶段，显示双面
                 cardDiv.innerHTML = `
                     <div style="font-size: 16px; font-weight: bold;">${formatValue(card.shown)}</div>
                     <div style="font-size: 12px; color: #999;">━━━</div>
@@ -1018,6 +1047,8 @@ function renderPlayedCards() {
             }
             
             container.appendChild(cardDiv);
+        } catch (error) {
+            console.error('❌ 渲染卡牌失败:', error, card);
         }
     });
 }
@@ -1046,3 +1077,30 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🎴 《牌》游戏加载完成');
     initGame();
 });
+
+// ==================== 全局错误处理 ====================
+
+window.addEventListener('error', function(event) {
+    console.error('🚨 全局错误:', event.error);
+    console.error('错误位置:', event.filename, '行', event.lineno);
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('🚨 未处理的Promise错误:', event.reason);
+});
+
+// 定期检查连接状态
+setInterval(() => {
+    if (database && gameRef) {
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.once('value').then(snap => {
+            if (snap.val() === true) {
+                console.log('✅ Firebase 连接正常');
+            } else {
+                console.warn('⚠️ Firebase 连接断开');
+            }
+        }).catch(err => {
+            console.error('❌ 无法检查 Firebase 连接:', err);
+        });
+    }
+}, 30000); // 每30秒检查一次
